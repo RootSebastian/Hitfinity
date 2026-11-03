@@ -236,7 +236,7 @@ All rights reserved (for now).
 ---
 
 *Built as a personal project. PRs and issues welcome once it stabilizes.*
-```
+
 
 
 
