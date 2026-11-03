@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hitfinity — Train with intent</title>
+<meta name="description" content="Hitfinity is an open-source fitness tracker for Android and Linux. Workouts, weekly planning, GPS walks, nutrition, and hydration — one app, zero accounts.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════
+   HITFINITY DESIGN SYSTEM
+   One accent. Flat surfaces. Hairlines. Editorial type.
+   ═══════════════════════════════════════════════════ */
+:root {
+  --accent: #FF5A1F;
+  --accent-soft: rgba(255, 90, 31, 0.12);
+  --bg: #0A0B0D;
+  --surface: #111316;
+  --surface-high: #181B1F;
+  --hairline: rgba(255, 255, 255, 0.07);
+  --hairline-strong: rgba(255, 255, 255, 0.12);
+  --text: #F4F4F5;
+  --text-muted: #9BA1A8;
+  --text-faint: #5F656D;
+  --radius: 20px;
+  --font-display: 'Sora', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection { background: var(--accent); color: #fff; }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ─── Utility ────────────────────────────────────── */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.accent { color: var(--accent); }
+
+.rule {
+  height: 1px;
+  background: var(--hairline);
+  flex: 1;
+}
+
+/* ─── Scroll reveal ──────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-d1 { transition-delay: 0.1s; }
+.reveal-d2 { transition-delay: 0.2s; }
+.reveal-d3 { transition-delay: 0.3s; }
+
+/* ═══ NAV ═════════════════════════════════════════ */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(10, 11, 13, 0.72);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.nav-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-mark {
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 10px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.nav-links a:hover { color: var(--text); background: var(--surface-high); }
+
+.nav-cta {
+  background: var(--accent) !important;
+  color: #fff !important;
+  padding: 8px 18px !important;
+  border-radius: 11px !important;
+}
+
+/* ═══ HERO ════════════════════════════════════════ */
+.hero {
+  position: relative;
+  padding: 170px 0 100px;
+  overflow: hidden;
+}
+
+.hero-glow {
+  position: absolute;
+  width: 700px; height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 65%);
+  top: -200px; right: -150px;
+  pointer-events: none;
+  animation: breathe 8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 60px;
+  align-items: center;
+  position: relative;
+}
+
+.hero h1 {
+  font-size: clamp(52px, 7vw, 88px);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  margin: 20px 0 24px;
+}
+
+.hero p.lead {
+  color: var(--text-muted);
+  font-size: 18px;
+  max-width: 480px;
+  margin-bottom: 36px;
+}
+
+.hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  font-weight: 700;
+  padding: 15px 28px;
+  border-radius: 14px;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 8px 30px rgba(255, 90, 31, 0.35);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(255, 90, 31, 0.45);
+}
+
+.btn-ghost {
+  border: 1px solid var(--hairline-strong);
+  color: var(--text);
+  background: transparent;
+}
+
+.btn-ghost:hover { background: var(--surface-high); transform: translateY(-2px); }
+
+.hero-meta {
+  margin-top: 44px;
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.hero-meta .stat { min-width: 90px; }
+
+.hero-meta .stat b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-meta .stat span {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+/* ═══ PHONE MOCKUP (pure CSS) ═════════════════════ */
+.phone-wrap {
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.phone {
+  width: 300px;
+  height: 620px;
+  background: var(--bg);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 42px;
+  padding: 10px;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6),
+              0 0 0 6px rgba(255, 255, 255, 0.02);
+  animation: float 7s ease-in-out infinite;
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0.5deg); }
+  50% { transform: translateY(-14px) rotate(-0.5deg); }
+}
+
+.phone-notch {
+  width: 110px; height: 28px;
+  background: var(--bg);
+  border-radius: 0 0 18px 18px;
+  position: absolute;
+  top: 10px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.screen {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  border-radius: 33px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: 38px;
+}
+
+/* — screen: status bar — */
+.statusbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 22px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* — screen: app header — */
+.app-header {
+  padding: 8px 20px 12px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* — screen: gradient timer hero — */
+.app-hero {
+  background: linear-gradient(135deg, #FF5A1F 0%, #FF7038 100%);
+  padding: 18px 20px;
+  text-align: center;
+}
+
+.app-hero .timer {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-stats {
+  display: flex;
+  margin-top: 14px;
+}
+
+.app-stats div {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.app-stats b {
+  display: block;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-stats span {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+/* — screen: plan chips — */
+.plan-chips {
+  padding: 14px 20px 4px;
+}
+
+.plan-chips .label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--hairline);
+  color: var(--text);
+  background: var(--surface-high);
+}
+
+.chip.done {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.chip-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.chip.done .chip-dot { background: var(--accent); }
+
+/* — screen: exercise cards — */
+.app-body { padding: 12px 20px; flex: 1; overflow: hidden; }
+
+.ex-card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.ex-icon {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.ex-name { font-size: 12px; font-weight: 700; }
+.ex-sub  { font-size: 10px; color: var(--text-muted); }
+
+/* — screen: bottom nav — */
+.app-nav {
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 24px 18px;
+  border-top: 1px solid var(--hairline);
+  background: var(--bg);
+}
+
+.nav-dot { text-align: center; font-size: 8px; color: var(--text-faint); }
+.nav-dot .ico { font-size: 15px; margin-bottom: 3px; }
+.nav-dot.active { color: var(--accent); }
+.nav-dot.active .ico { color: var(--accent); }
+
+/* ═══ MARQUEE STRIP ════════════════════════════════ */
+.marquee-section {
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  padding: 22px 0;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.marquee {
+  display: flex;
+  gap: 56px;
+  width: max-content;
+  animation: scroll 32s linear infinite;
+}
+
+.marquee span {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 56px;
+}
+
+.marquee span::after { content: "◦"; color: var(--accent); }
+
+@keyframes scroll { to { transform: translateX(-50%); } }
+
+/* ═══ FEATURES ═════════════════════════════════════ */
+.features { padding: 120px 0 40px; }
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.feature-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+  padding: 70px 0;
+}
+
+.feature-row.reverse .feature-text { order: 2; }
+
+.feature-num {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  margin-bottom: 16px;
+}
+
+.feature-text h2 {
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  margin-bottom: 18px;
+}
+
+.feature-text p {
+  color: var(--text-muted);
+  font-size: 16.5px;
+  max-width: 440px;
+}
+
+.feature-list {
+  margin-top: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feature-list li {
+  list-style: none;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 14.5px;
+  color: var(--text-muted);
+}
+
+.feature-list li::before {
+  content: "—";
+  color: var(--accent);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* — mini UI cards (feature visuals) — */
+.mini-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+}
+
+.mini-card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  transition: border-color 0.25s, transform 0.25s;
+}
+
+.mini-card:hover {
+  border-color: var(--hairline-strong);
+  transform: translateY(-3px);
+}
+
+.mc-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 12px;
+}
+
+.mc-big {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 34px;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+/* progress bar element */
+.bar {
+  height: 5px;
+  background: var(--surface-high);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+}
+
+.bar.blue i  { background: #7DB2FF; }
+.bar.green i { background: #6EE7A0; }
+.bar.amber i { background: #FBBF68; }
+
+/* ring visual */
+.ring-wrap { display: flex; gap: 20px; align-items: center; }
+
+.ring {
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  background:
+    conic-gradient(var(--accent) 0 62%, var(--surface-high) 62% 100%);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.ring::before {
+  content: "";
+  position: absolute;
+  width: 84px; height: 84px;
+  background: var(--surface);
+  border-radius: 50%;
+}
+
+.ring b {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* hairline stat row visual */
+.stat-row {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.stat-row div {
+  flex: 1;
+  padding: 18px 8px;
+  text-align: center;
+}
+
+.stat-row div + div { border-left: 1px solid var(--hairline); }
+
+.stat-row b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-row span {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+/* week dots visual */
+.week-dots { display: flex; gap: 10px; justify-content: center; }
+
+.wd {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--surface-high);
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.wd.on  { background: var(--accent); color: #fff; }
+.wd.now { box-shadow: 0 0 0 2px var(--accent); }
+
+/* ═══ BENTO ════════════════════════════════════════ */
+.bento-section { padding: 80px 0 120px; }
+
+.bento {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 190px;
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.b-cell {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 26px;
+  transition: border-color 0.25s, transform 0.25s;
+  overflow: hidden;
+  position: relative;
+}
+
+.b-cell:hover { border-color: var(--hairline-strong); transform: translateY(-3px); }
+
+.b-cell.wide { grid-column: span 2; }
+.b-cell.tall { grid-row: span 2; }
+
+.b-cell .ico {
+  font-size: 22px;
+  margin-bottom: 14px;
+  display: block;
+}
+
+.b-cell h3 { font-size: 17px; margin-bottom: 8px; font-weight: 700; }
+.b-cell p  { font-size: 13.5px; color: var(--text-muted); line-height: 1.55; }
+
+/* ═══ TECH ═════════════════════════════════════════ */
+.tech { padding: 90px 0; border-top: 1px solid var(--hairline); }
+
+.tech-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-top: 44px;
+}
+
+.tech-pill {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 16px 20px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.tech-pill:hover { border-color: var(--accent); }
+
+.tech-pill small {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  margin-top: 3px;
+  letter-spacing: 0.06em;
+}
+
+/* ═══ CTA ═════════════════════════════════════════ */
+.cta {
+  padding: 130px 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--hairline);
+}
+
+.cta-glow {
+  position: absolute;
+  width: 600px; height: 600px;
+  left: 50%; top: 60%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.cta h2 {
+  font-size: clamp(40px, 6vw, 68px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 20px;
+}
+
+.cta p {
+  color: var(--text-muted);
+  font-size: 17px;
+  max-width: 440px;
+  margin: 0 auto 40px;
+}
+
+.cta .hero-actions { justify-content: center; }
+
+/* ═══ FOOTER ═══════════════════════════════════════ */
+footer {
+  border-top: 1px solid var(--hairline);
+  padding: 40px 0;
+}
+
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.footer-inner p { font-size: 13px; color: var(--text-faint); }
+
+.footer-links { display: flex; gap: 22px; }
+
+.footer-links a {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footer-links a:hover { color: var(--text); }
+
+/* ═══ RESPONSIVE ═══════════════════════════════════ */
+@media (max-width: 960px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 70px; }
+  .hero { padding-top: 130px; text-align: center; }
+  .hero p.lead { margin-left: auto; margin-right: auto; }
+  .hero-actions, .hero-meta { justify-content: center; }
+  .feature-row { grid-template-columns: 1fr; gap: 40px; padding: 50px 0; }
+  .feature-row.reverse .feature-text { order: 0; }
+  .bento { grid-template-columns: repeat(2, 1fr); }
+  .b-cell.wide { grid-column: span 2; }
+  .nav-links a:not(.nav-cta) { display: none; }
+}
+
+@media (max-width: 560px) {
+  .container { padding: 0 20px; }
+  .bento { grid-template-columns: 1fr; }
+  .b-cell.wide { grid-column: span 1; }
+  .b-cell.tall { grid-row: span 1; }
+  .phone { width: 260px; height: 540px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="#">
+      <span class="logo-mark">H</span>
+      HITFINITY<span class="accent">.</span>
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#opensource">Open&nbsp;Source</a>
+      <a class="nav-cta" href="https://github.com/RootSebastian/Hitfinity" target="_blank">GitHub ↗</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<header class="hero">
+  <div class="hero-glow"></div>
+  <div class="container hero-grid">
+
+    <div>
+      <div class="eyebrow reveal">Open source · Android &amp; Linux</div>
+      <h1 class="reveal reveal-d1">Train with<br>intent<span class="accent">.</span></h1>
+      <p class="lead reveal reveal-d2">
+        Hitfinity is a complete training companion — log every set, plan
+        your week, track walks with live GPS, watch your nutrition, and
+        see it all in one dashboard. No accounts. No cloud. Your data,
+        on your device.
+      </p>
+      <div class="hero-actions reveal reveal-d2">
+        <a class="btn btn-primary" href="https://github.com/RootSebastian/Hitfinity" target="_blank">
+          ★ Star on GitHub
+        </a>
+        <a class="btn btn-ghost" href="#features">
+          Explore features ↓
+        </a>
+      </div>
+      <div class="hero-meta reveal reveal-d3">
+        <div class="stat"><b>160+</b><span>Foods</span></div>
+        <div class="stat"><b>75+</b><span>Exercises</span></div>
+        <div class="stat"><b>9</b><span>Tables</span></div>
+        <div class="stat"><b>2</b><span>Platforms</span></div>
+      </div>
+    </div>
+
+    <!-- Pure-CSS phone mockup: the active workout screen -->
+    <div class="phone-wrap reveal reveal-d2">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="screen">
+          <div class="statusbar">
+            <span>13:08</span><span>93% ▮</span>
+          </div>
+          <div class="app-header">Active Workout</div>
+
+          <div class="app-hero">
+            <div class="timer">12:47</div>
+            <div class="app-stats">
+              <div><b>6</b><span>Sets</span></div>
+              <div><b>2</b><span>Exercises</span></div>
+              <div><b>48</b><span>Reps</span></div>
+              <div><b>62.5</b><span>Heaviest</span></div>
+            </div>
+          </div>
+
+          <div class="plan-chips">
+            <div class="label">Today's Plan · 1 left</div>
+            <div class="chip-row">
+              <span class="chip done"><i class="chip-dot"></i>Bench Press ✓ 3</span>
+              <span class="chip done"><i class="chip-dot"></i>Incline Press ✓ 2</span>
+              <span class="chip"><i class="chip-dot"></i>Cable Flyes</span>
+            </div>
+          </div>
+
+          <div class="app-body">
+            <div class="ex-card">
+              <div class="ex-icon" style="background:rgba(239,68,68,.14);color:#EF4444;">▤</div>
+              <div>
+                <div class="ex-name">Bench Press</div>
+                <div class="ex-sub">3 sets · 60, 62.5, 62.5 kg</div>
+              </div>
+            </div>
+            <div class="ex-card">
+              <div class="ex-icon" style="background:rgba(239,68,68,.14);color:#EF4444;">▤</div>
+              <div>
+                <div class="ex-name">Incline Bench Press</div>
+                <div class="ex-sub">2 sets · 50, 50 kg</div>
+              </div>
+            </div>
+            <div class="ex-card">
+              <div class="ex-icon" style="background:rgba(59,130,246,.14);color:#3B82F6;">▤</div>
+              <div>
+                <div class="ex-name">Lat Pulldown</div>
+                <div class="ex-sub">1 set · 45 kg</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="app-nav">
+            <div class="nav-dot active"><div class="ico">▤</div>Train</div>
+            <div class="nav-dot"><div class="ico">▦</div>Plan</div>
+            <div class="nav-dot"><div class="ico">▦</div>Steps</div>
+            <div class="nav-dot"><div class="ico">▦</div>Body</div>
+            <div class="nav-dot"><div class="ico">⚡</div>More</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+<!-- ═══════════════ MARQUEE ═══════════════ -->
+<div class="marquee-section">
+  <div class="marquee">
+    <span>Set logging <span>Weekly planner</span> GPS route tracking
+    <span>Treadmill mode</span> Step goals <span>Weight trends</span>
+    Macro tracking <span>160+ food catalog</span> Water intake
+    <span>Day &amp; week summaries</span> Background-safe walks
+    <span>Editable sessions</span> Offline-first
+    <span>Drift + SQLite</span></span>
+    <span>Set logging <span>Weekly planner</span> GPS route tracking
+    <span>Treadmill mode</span> Step goals <span>Weight trends</span>
+    Macro tracking <span>160+ food catalog</span> Water intake
+    <span>Day &amp; week summaries</span> Background-safe walks
+    <span>Editable sessions</span> Offline-first
+    <span>Drift + SQLite</span></span>
+  </div>
+</div>
+
+<!-- ═══════════════ FEATURES ═══════════════ -->
+<section class="features" id="features">
+  <div class="container">
+
+    <div class="section-head reveal">
+      <span class="eyebrow">What's inside</span>
+      <div class="rule"></div>
+    </div>
+
+    <!-- Feature 1: Workouts -->
+    <div class="feature-row">
+      <div class="feature-text reveal">
+        <div class="feature-num">01 — WORKOUTS</div>
+        <h2>Every set,<br>logged in seconds<span class="accent">.</span></h2>
+        <p>
+          A live timer, a 75+ exercise catalog, and smart defaults that
+          pre-fill your last weight and reps. Sessions even survive
+          force-killing the app — come back to a "session in progress"
+          card, timer intact.
+        </p>
+        <ul class="feature-list">
+          <li>Tap-to-log sets with per-exercise cards</li>
+          <li>Edit any past session — original date preserved</li>
+          <li>Barbell, dumbbell, machine, cable, weighted &amp; pure bodyweight</li>
+          <li>Sessions survive app restarts and force-kills</li>
+        </ul>
+      </div>
+      <div class="mini-cards reveal reveal-d1">
+        <div class="mini-card">
+          <div class="mc-label">Active Session</div>
+          <div class="mc-big">12:47</div>
+          <div class="mc-sub">6 sets · 2 exercises · heaviest 62.5 kg</div>
+          <div class="bar"><i style="width: 68%;"></i></div>
+        </div>
+        <div class="stat-row">
+          <div><b>6</b><span>Sets</span></div>
+          <div><b>48</b><span>Reps</span></div>
+          <div><b>62.5</b><span>Top kg</span></div>
+          <div><b>13m</b><span>Time</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 2: Planner -->
+    <div class="feature-row reverse">
+      <div class="feature-text reveal">
+        <div class="feature-num">02 — PLANNER</div>
+        <h2>Monday is<br>chest day<span class="accent">.</span></h2>
+        <p>
+          Plan your split once. Every Monday, your exercise list is
+          waiting on the workout screen as tap-to-log chips — check
+          them off set by set as you train.
+        </p>
+        <ul class="feature-list">
+          <li>Assign any exercise to any weekday</li>
+          <li>Today's plan appears as quick-log chips mid-workout</li>
+          <li>Chips check off with set counts as you complete them</li>
+        </ul>
+      </div>
+      <div class="mini-cards reveal reveal-d1">
+        <div class="mini-card">
+          <div class="mc-label">This Week</div>
+          <div class="week-dots">
+            <div class="wd on">M</div>
+            <div class="wd">T</div>
+            <div class="wd on">W</div>
+            <div class="wd">T</div>
+            <div class="wd on">F</div>
+            <div class="wd">S</div>
+            <div class="wd now">S</div>
+          </div>
+        </div>
+        <div class="mini-card">
+          <div class="mc-label">Monday Plan</div>
+          <div class="chip-row">
+            <span class="chip done"><i class="chip-dot"></i>Bench Press</span>
+            <span class="chip done"><i class="chip-dot"></i>Incline Press</span>
+            <span class="chip"><i class="chip-dot"></i>Cable Flyes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 3: Walks -->
+    <div class="feature-row">
+      <div class="feature-text reveal">
+        <div class="feature-num">03 — WALKS &amp; STEPS</div>
+        <h2>Your route,<br>drawn live<span class="accent">.</span></h2>
+        <p>
+          GPS walks with a live OpenStreetMap view, distance computed
+          from real satellite fixes, and a foreground service that keeps
+          recording while you use other apps. Indoors? Treadmill mode
+          takes the numbers straight from the machine.
+        </p>
+        <ul class="feature-list">
+          <li>Background-safe GPS tracking with live map</li>
+          <li>Treadmill mode — enter what the display shows</li>
+          <li>Hardware step counting with custom daily goals</li>
+          <li>Routes saved with every walk</li>
+        </ul>
+      </div>
+      <div class="mini-cards reveal reveal-d1">
+        <div class="mini-card">
+          <div class="mc-label">Today's Steps</div>
+          <div class="ring-wrap">
+            <div class="ring"><b>7,214</b></div>
+            <div>
+              <div class="mc-sub" style="margin-top:0;">of 10,000 goal</div>
+              <div class="mc-sub" style="color:var(--accent);font-weight:700;">
+                72% · 2,786 to go
+              </div>
+              <div class="bar" style="width:130px;"><i style="width:72%;"></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div><b>3.4</b><span>km</span></div>
+          <div><b>4,590</b><span>Steps</span></div>
+          <div><b>38m</b><span>Time</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 4: Body -->
+    <div class="feature-row reverse">
+      <div class="feature-text reveal">
+        <div class="feature-num">04 — BODY &amp; NUTRITION</div>
+        <h2>Fuel the<br>machine<span class="accent">.</span></h2>
+        <p>
+          Track your weight trend with a proper line chart, log meals
+          from a 160+ food catalog with live macro previews, and hit
+          your hydration goal with one-tap water logging.
+        </p>
+        <ul class="feature-list">
+          <li>160+ foods with per-100g macros &amp; serving presets</li>
+          <li>Custom calorie / protein / carb / fat goals</li>
+          <li>Animated weight trend chart with delta pills</li>
+          <li>One-tap water tracking with daily goal</li>
+        </ul>
+      </div>
+      <div class="mini-cards reveal reveal-d1">
+        <div class="mini-card">
+          <div class="mc-label">Today's Fuel</div>
+          <div class="ring-wrap">
+            <div class="ring"><b>1,362</b></div>
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:700;display:flex;justify-content:space-between;margin-bottom:6px;">
+                <span>Protein</span><span style="color:var(--text-muted);">96 / 160g</span></div>
+              <div class="bar blue"><i style="width:60%;"></i></div>
+              <div style="font-size:12px;font-weight:700;display:flex;justify-content:space-between;margin:10px 0 6px;">
+                <span>Carbs</span><span style="color:var(--text-muted);">142 / 240g</span></div>
+              <div class="bar green"><i style="width:59%;"></i></div>
+              <div style="font-size:12px;font-weight:700;display:flex;justify-content:space-between;margin:10px 0 6px;">
+                <span>Fat</span><span style="color:var(--text-muted);">38 / 70g</span></div>
+              <div class="bar amber"><i style="width:54%;"></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div><b>73.4</b><span>kg</span></div>
+          <div><b>−0.1</b><span>Since last</span></div>
+          <div><b>1,750</b><span>ml water</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 5: Summary -->
+    <div class="feature-row">
+      <div class="feature-text reveal">
+        <div class="feature-num">05 — SUMMARY</div>
+        <h2>The whole week,<br>at a glance<span class="accent">.</span></h2>
+        <p>
+          A day and week dashboard across everything — training,
+          movement, nutrition, and body — with an honest verdict
+          headline and a calorie bar chart with your goal line.
+        </p>
+        <ul class="feature-list">
+          <li>Day and Week views, live-updating</li>
+          <li>Verdict headlines: "Full house." to "Clean slate."</li>
+          <li>Weekly calorie chart with dashed goal line</li>
+        </ul>
+      </div>
+      <div class="mini-cards reveal reveal-d1">
+        <div class="mini-card">
+          <div class="mc-label">This Week · Killing it.</div>
+          <div class="stat-row" style="border:none;">
+            <div><b>4</b><span>Sessions</span></div>
+            <div><b>41k</b><span>Steps</span></div>
+            <div><b>2,310</b><span>kcal/day</span></div>
+          </div>
+        </div>
+        <div class="mini-card">
+          <div class="mc-label">Avg kcal / day</div>
+          <div style="display:flex;align-items:flex-end;gap:6px;height:56px;">
+            <div style="flex:1;background:var(--surface-high);border-radius:4px 4px 0 0;height:62%;"></div>
+            <div style="flex:1;background:var(--surface-high);border-radius:4px 4px 0 0;height:88%;"></div>
+            <div style="flex:1;background:var(--surface-high);border-radius:4px 4px 0 0;height:45%;"></div>
+            <div style="flex:1;background:var(--surface-high);border-radius:4px 4px 0 0;height:75%;"></div>
+            <div style="flex:1;background:var(--accent);border-radius:4px 4px 0 0;height:92%;"></div>
+            <div style="flex:1;background:var(--surface-high);border-radius:4px 4px 0 0;height:30%;"></div>
+            <div style="flex:1;background:var(--surface-high);border-radius:4px 0 0 0;height:55%;"></div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;font-size:8.5px;color:var(--text-faint);font-weight:700;">
+            <span style="flex:1;text-align:center;">M</span><span style="flex:1;text-align:center;">T</span>
+            <span style="flex:1;text-align:center;">W</span><span style="flex:1;text-align:center;">T</span>
+            <span style="flex:1;text-align:center;color:var(--accent);">F</span>
+            <span style="flex:1;text-align:center;">S</span><span style="flex:1;text-align:center;">S</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════ BENTO ═══════════════ -->
+<section class="bento-section">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">And everything else</span>
+      <div class="rule"></div>
+    </div>
+
+    <div class="bento">
+      <div class="b-cell tall reveal">
+        <span class="ico">💾</span>
+        <h3>Offline-first, forever</h3>
+        <p>Everything lives in a local SQLite database via Drift. No
+        accounts, no sign-ups, no servers, no tracking. Your training
+        history belongs to you and works on a plane.</p>
+      </div>
+      <div class="b-cell wide reveal reveal-d1">
+        <span class="ico">🌙</span>
+        <h3>Dark-first design system</h3>
+        <p>One accent color, flat surfaces, hairline borders, editorial
+        typography with tabular numerals, haptics on key actions, and
+        adaptive navigation that goes bottom-bar on phones and side-rail
+        on desktop.</p>
+      </div>
+      <div class="b-cell reveal reveal-d2">
+        <span class="ico">📍</span>
+        <h3>Background GPS</h3>
+        <p>A foreground service keeps long walks recording while you use
+        other apps or pocket the phone.</p>
+      </div>
+      <div class="b-cell reveal">
+        <span class="ico">🇮🇳</span>
+        <h3>Built for real food</h3>
+        <p>Roti, dal, paneer, momos, biryani — the catalog covers Indian
+        staples alongside western basics.</p>
+      </div>
+      <div class="b-cell reveal reveal-d1">
+        <span class="ico">🐧</span>
+        <h3>Android + Linux</h3>
+        <p>One Flutter codebase, two native targets. Phone in your
+        pocket, desktop on your desk.</p>
+      </div>
+      <div class="b-cell wide reveal reveal-d2">
+        <span class="ico">🔒</span>
+        <h3>Migration-safe data</h3>
+        <p>Versioned database migrations mean app updates never wipe
+        your history. Weeks of training data, preserved across every
+        upgrade.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ TECH ═══════════════ -->
+<section class="tech" id="opensource">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Built with</span>
+      <div class="rule"></div>
+    </div>
+    <div class="tech-grid reveal reveal-d1">
+      <div class="tech-pill">Flutter<small>UI framework</small></div>
+      <div class="tech-pill">Drift<small>Reactive SQLite</small></div>
+      <div class="tech-pill">flutter_map<small>OSM mapping</small></div>
+      <div class="tech-pill">Geolocator<small>GPS + services</small></div>
+      <div class="tech-pill">Pedometer<small>Step sensor</small></div>
+      <div class="tech-pill">fl_chart<small>Charts</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ CTA ═══════════════ -->
+<section class="cta">
+  <div class="cta-glow"></div>
+  <div class="container">
+    <div class="eyebrow reveal">Open source · MIT</div>
+    <h2 class="reveal reveal-d1">Your gym partner,<br>built in the open<span class="accent">.</span></h2>
+    <p class="reveal reveal-d2">
+      Clone it, run it, break it, improve it. Hitfinity is developed in
+      the open — every feature, every fix, on GitHub.
+    </p>
+    <div class="hero-actions reveal reveal-d3">
+      <a class="btn btn-primary" href="https://github.com/RootSebastian/Hitfinity" target="_blank">
+        ★ Star the repo
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/RootSebastian/Hitfinity#readme" target="_blank">
+        Read the docs
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <div class="container footer-inner">
+    <a class="logo" href="#" style="font-size:15px;">
+      <span class="logo-mark" style="width:22px;height:22px;font-size:11px;">H</span>
+      HITFINITY<span class="accent">.</span>
+    </a>
+    <p>Built with intent. MIT licensed.</p>
+    <div class="footer-links">
+      <a href="https://github.com/RootSebastian/Hitfinity" target="_blank">GitHub</a>
+      <a href="#features">Features</a>
+      <a href="#opensource">Open Source</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ═══════════════ TINY JS: scroll reveals ═════ -->
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
