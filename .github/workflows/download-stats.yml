@@ -1,0 +1,55 @@
+name: Download stats
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: download-stats
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record download counts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          DATE="$(date -u +%F)"
+
+          curl -sf -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/repos/${REPO}/releases?per_page=100" \
+            | jq '[.[] | {tag: .tag_name, assets: [.assets[] | {name, download_count}]}]' \
+            > downloads/snapshot.json
+
+          TOTAL="$(jq '[.[].assets[].download_count] | add // 0' downloads/snapshot.json)"
+          echo "Total downloads: ${TOTAL}"
+
+          printf '{"schemaVersion":1,"label":"downloads","message":"%s","color":"#A6F511"}\n' \
+            "$TOTAL" > downloads/badge.json
+
+          if [ ! -f downloads/history.csv ]; then
+            echo "date,total" > downloads/history.csv
+          fi
+          grep -q "^${DATE}," downloads/history.csv \
+            || echo "${DATE},${TOTAL}" >> downloads/history.csv
+
+          cat downloads/history.csv
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: download stats ${DATE}"
+            git push
+          fi
