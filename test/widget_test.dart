@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/services/secure_launcher.dart';
-import '../lib/theme/app_theme.dart';
+import 'package:fitness_app/services/secure_launcher.dart';
+import 'package:fitness_app/theme/app_theme.dart';
 
 void main() {
   group('SecureLauncher.isAllowed', () {
