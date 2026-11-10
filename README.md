@@ -1,6 +1,6 @@
 # HITFINITY
 
-[![Downloads](https://img.shields.io/github/downloads/RootSebastian/Hitfinity/total?label=downloads&labelColor=0A0E08&color=A6F511&style=flat-square)](https://github.com/RootSebastian/Hitfinity/releases)
+[![Downloads](https://img.shields.io/github/downloads/RootSebastian/Hitfinity/total?label=downloads&labelColor=0A0E08&color=A6F511&style=flat-square&kill_cache=1)](https://github.com/RootSebastian/Hitfinity/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-A6F511?labelColor=0A0E08&style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20(pending)-A6F511?labelColor=0A0E08&style=flat-square)](https://github.com/RootSebastian/Hitfinity/releases)
 
