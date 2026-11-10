@@ -1,14 +1,23 @@
 # HITFINITY
 
-[![Downloads](https://img.shields.io/github/downloads/RootSebastian/Hitfinity/total?label=downloads&labelColor=0A0E08&color=A6F511&style=flat-square&kill_cache=1)](https://github.com/RootSebastian/Hitfinity/releases)
+[![Downloads](https://img.shields.io/github/downloads/RootSebastian/Hitfinity/total?label=downloads&labelColor=0A0E08&color=A6F511&style=flat-square)](https://github.com/RootSebastian/Hitfinity/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-A6F511?labelColor=0A0E08&style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20(pending)-A6F511?labelColor=0A0E08&style=flat-square)](https://github.com/RootSebastian/Hitfinity/releases)
+[![Website](https://img.shields.io/badge/website-rootsebastian.github.io%2FHitfinity-A6F511?labelColor=0A0E08&style=flat-square)](https://rootsebastian.github.io/Hitfinity/)
 
 Offline-first fitness tracker — strength training, walking, body weight
 and nutrition in one clean, fast app. No accounts, no cloud, no tracking:
 all your data lives in a local database on your device.
 
-![HITFINITY](site_shots/shot_mobile_full.png)
+<p align="center">
+  <a href="https://rootsebastian.github.io/Hitfinity/">
+    <img src="site_shots/shot_phone.png" alt="HITFINITY app — summary dashboard" width="230">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://rootsebastian.github.io/Hitfinity/">rootsebastian.github.io/Hitfinity</a>
+</p>
 
 ## Features
 
@@ -180,4 +189,3 @@ and match the existing style.
 ## License
 
 [MIT](LICENSE) — free to use, modify and distribute.
-
