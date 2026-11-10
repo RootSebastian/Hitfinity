@@ -3345,18 +3345,19 @@ class $$ExercisesTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (setLogsRefs)
-                    await $_getPrefetchedData<
+                    await $_getPrefetchedDataByColumns<
                       ExerciseRow,
                       $ExercisesTable,
-                      SetLogRow
+                      SetLogRow,
+                      $SetLogsTable
                     >(
                       currentTable: table,
                       referencedTable: $$ExercisesTableReferences
                           ._setLogsRefsTable(db),
                       managerFromTypedResult: (p0) =>
                           $$ExercisesTableReferences(db, table, p0).setLogsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.exerciseId == item.id),
+                      currentColumn: 'id',
+                      referencedColumn: 'exercise_id',
                       typedResults: items,
                     ),
                 ];
@@ -3612,10 +3613,11 @@ class $$WorkoutSessionsTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (setLogsRefs)
-                    await $_getPrefetchedData<
+                    await $_getPrefetchedDataByColumns<
                       WorkoutSessionRow,
                       $WorkoutSessionsTable,
-                      SetLogRow
+                      SetLogRow,
+                      $SetLogsTable
                     >(
                       currentTable: table,
                       referencedTable: $$WorkoutSessionsTableReferences
@@ -3626,8 +3628,8 @@ class $$WorkoutSessionsTableTableManager
                             table,
                             p0,
                           ).setLogsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.sessionId == item.id),
+                      currentColumn: 'id',
+                      referencedColumn: 'session_id',
                       typedResults: items,
                     ),
                 ];
