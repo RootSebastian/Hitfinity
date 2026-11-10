@@ -181,6 +181,3 @@ and match the existing style.
 
 [MIT](LICENSE) — free to use, modify and distribute.
 
-
-
-
