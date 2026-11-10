@@ -142,7 +142,7 @@ class _WalkScreenState extends State<WalkScreen>
             distanceFilter: 3,
             foregroundNotificationConfig:
                 const ForegroundNotificationConfig(
-              notificationTitle: 'PulseTrack',
+              notificationTitle: 'Hitfinity',
               notificationText:
                   'Walk in progress — route & distance keep recording',
               enableWakeLock: true,
@@ -330,9 +330,11 @@ class _WalkScreenState extends State<WalkScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _mode == WalkMode.gps
-                      ? 'GPS Walk'
-                      : 'Treadmill Walk',
+                  _isRunning || _banked > Duration.zero
+                      ? (_mode == WalkMode.gps
+                          ? 'GPS Walk'
+                          : 'Treadmill Walk')
+                      : 'New Walk',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -343,7 +345,7 @@ class _WalkScreenState extends State<WalkScreen>
                   ),
                 ),
                 const SizedBox(height: 2),
-                 Text(
+                Text(
                   'Track your session',
                   style: TextStyle(
                     fontSize: 11.5,
@@ -354,12 +356,46 @@ class _WalkScreenState extends State<WalkScreen>
             ),
           ),
           const SizedBox(width: AppTheme.spaceSM),
-          HitChip(
-            label: _isRunning ? 'LIVE' : 'READY',
-            icon: _isRunning
-                ? Icons.radio_button_checked_rounded
-                : Icons.radio_button_off_rounded,
-            selected: _isRunning,
+          _statusPill(),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusPill() {
+    final live = _isRunning;
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 13),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: live ? AppTheme.lime : AppTheme.surfaceAlt,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color:
+              live ? Colors.transparent : AppTheme.hairlineDark,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: live ? AppTheme.ink : AppTheme.lime,
+            ),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            live ? 'LIVE' : 'READY',
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+              color: live ? AppTheme.ink : AppTheme.text,
+            ),
           ),
         ],
       ),
@@ -415,7 +451,7 @@ class _WalkScreenState extends State<WalkScreen>
             vertical: AppTheme.spaceMD),
         decoration: BoxDecoration(
           gradient: isSelected ? AppTheme.heroGradient : null,
-          color: isSelected ? null : AppTheme.surface,
+          color: isSelected ? null : AppTheme.surfaceAlt,
           borderRadius: BorderRadius.circular(AppTheme.radiusMD),
           border: isSelected
               ? null
@@ -437,7 +473,7 @@ class _WalkScreenState extends State<WalkScreen>
               size: 24,
               color: isSelected
                   ? AppTheme.ink
-                  : AppTheme.textMuted,
+                  : AppTheme.lime.withValues(alpha: 0.65),
             ),
             const SizedBox(height: 6),
             Text(
@@ -469,19 +505,20 @@ class _WalkScreenState extends State<WalkScreen>
 
   Widget _buildStatsBar() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(
-          AppTheme.spaceLG, AppTheme.spaceMD, AppTheme.spaceLG, 0),
+      margin: const EdgeInsets.fromLTRB(AppTheme.spaceLG,
+          AppTheme.spaceMD, AppTheme.spaceLG, AppTheme.spaceMD),
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
         vertical: AppTheme.spaceMD,
         horizontal: AppTheme.spaceMD,
       ),
       decoration: BoxDecoration(
-        gradient: AppTheme.heroGradient,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(AppTheme.radiusXL),
+        border: Border.all(color: AppTheme.hairlineDark),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.lime.withValues(alpha: 0.18),
+            color: Colors.black.withValues(alpha: 0.28),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -490,30 +527,49 @@ class _WalkScreenState extends State<WalkScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _stat(_formattedElapsed, 'TIME', Icons.timer_rounded),
+          _stat(
+              _formattedElapsed, 'TIME', Icons.timer_rounded,
+              hero: true),
+          _statDivider(),
           _stat(_formatDistance(_currentDistance), 'DISTANCE',
               Icons.straighten_rounded),
+          _statDivider(),
           _stat(_currentSteps.toString(), 'STEPS',
               Icons.directions_walk_rounded),
-          if (_mode == WalkMode.gps && _gpsAccuracy != null)
+          if (_mode == WalkMode.gps && _gpsAccuracy != null) ...[
+            _statDivider(),
             _stat('±${_gpsAccuracy!.round()}m', 'GPS',
                 Icons.satellite_alt_rounded),
+          ],
         ],
       ),
     );
   }
 
-  Widget _stat(String value, String label, IconData icon) {
+  Widget _statDivider() {
+    return Container(
+      width: 1,
+      height: 36,
+      color: AppTheme.hairlineDark,
+    );
+  }
+
+  Widget _stat(String value, String label, IconData icon,
+      {bool hero = false}) {
     return Column(
       children: [
-        Icon(icon, size: 15, color: AppTheme.ink.withValues(alpha: 0.7)),
+        Icon(
+          icon,
+          size: 15,
+          color: AppTheme.lime.withValues(alpha: hero ? 1 : 0.7),
+        ),
         const SizedBox(height: 4),
         Text(
           value,
-          style:       TextStyle(
-            fontSize: 17,
+          style: TextStyle(
+            fontSize: hero ? 18 : 16.5,
             fontWeight: FontWeight.w800,
-            color: AppTheme.ink,
+            color: hero ? AppTheme.lime : AppTheme.text,
             fontFeatures: [FontFeature.tabularFigures()],
           ),
         ),
@@ -523,7 +579,7 @@ class _WalkScreenState extends State<WalkScreen>
             fontSize: 9.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: AppTheme.ink.withValues(alpha: 0.62),
+            color: AppTheme.textMuted,
           ),
         ),
       ],
@@ -535,7 +591,18 @@ class _WalkScreenState extends State<WalkScreen>
       return _buildPlatformWarning();
     }
 
-    return Stack(
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+          AppTheme.spaceLG, 0, AppTheme.spaceLG, 0),
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+        border: Border.all(color: AppTheme.hairlineDark),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
       children: [
         FlutterMap(
           mapController: _mapController,
@@ -556,7 +623,7 @@ class _WalkScreenState extends State<WalkScreen>
             TileLayer(
               urlTemplate:
                   'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.pulsetrack.app',
+              userAgentPackageName: 'com.hitfinity.app',
             ),
             if (_routePoints.length >= 2)
               PolylineLayer(
@@ -680,6 +747,7 @@ class _WalkScreenState extends State<WalkScreen>
             ),
           ),
       ],
+      ),
     );
   }
 
@@ -788,7 +856,7 @@ class _WalkScreenState extends State<WalkScreen>
   Widget _buildTreadmillContent() {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
-          AppTheme.spaceLG, AppTheme.spaceLG, AppTheme.spaceLG, 0),
+          AppTheme.spaceLG, AppTheme.spaceSM, AppTheme.spaceLG, 0),
       children: [
         GlassCard(
           padding: const EdgeInsets.all(AppTheme.spaceMD),
@@ -867,7 +935,7 @@ class _WalkScreenState extends State<WalkScreen>
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppTheme.spaceLG,
-          AppTheme.spaceSM, AppTheme.spaceLG, AppTheme.spaceMD),
+          AppTheme.spaceMD, AppTheme.spaceLG, AppTheme.spaceLG),
       child: Row(
         children: [
           Expanded(
