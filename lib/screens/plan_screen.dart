@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../database/app_database.dart';
 import '../database/database_provider.dart';
 import '../data/exercise_catalog.dart';
-import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../theme/glass_card.dart';
+import '../widgets/hit_widgets.dart';
 import '../widgets/exercise_library.dart';
+import '../services/hit_settings.dart';
 
 class PlanScreen extends StatefulWidget {
   const PlanScreen({super.key});
@@ -23,7 +23,7 @@ class _PlanScreenState extends State<PlanScreen> {
   ];
   static const _dayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-  late int _selectedDay; // 1 = Mon … 7 = Sun
+  late int _selectedDay;
   List<ScheduledExerciseRow> _items = [];
   StreamSubscription<List<ScheduledExerciseRow>>? _sub;
 
@@ -50,22 +50,19 @@ class _PlanScreenState extends State<PlanScreen> {
   }
 
   void _selectDay(int day) {
-    HapticFeedback.selectionClick();
+    HitHaptics.selectionClick();
     setState(() => _selectedDay = day);
     _listen();
   }
 
   Future<void> _showExercisePicker() async {
-    HapticFeedback.mediumImpact();
+    HitHaptics.mediumImpact();
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        final theme = Theme.of(sheetContext);
-        // Mark exercises already on this day — tapping one of
-        // those REMOVES it (toggle), tapping a new one ADDS it.
         final existing = {
           for (final i in _items) i.exerciseName: 1,
         };
@@ -73,12 +70,11 @@ class _PlanScreenState extends State<PlanScreen> {
         return Container(
           height: MediaQuery.of(sheetContext).size.height * 0.85,
           decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24)),
+            color: AppTheme.surfaceAlt,
+            borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppTheme.radius2XL)),
             border: Border(
-              top: BorderSide(
-                  color: AppTheme.hairline(theme.brightness)),
+              top: BorderSide(color: AppTheme.hairlineDark),
             ),
           ),
           child: Column(
@@ -88,7 +84,7 @@ class _PlanScreenState extends State<PlanScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.outlineVariant,
+                  color: AppTheme.track,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -103,19 +99,23 @@ class _PlanScreenState extends State<PlanScreen> {
                     Expanded(
                       child: Text(
                         'Plan ${_dayNames[_selectedDay - 1]}',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
+                          color: AppTheme.text,
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: Icon(Icons.close_rounded,
+                          color: AppTheme.textMuted),
                       onPressed: () => Navigator.pop(sheetContext),
                     ),
                   ],
                 ),
               ),
-                            Expanded(
+              Expanded(
                 child: ListView(
                   padding: const EdgeInsets.only(
                       bottom: AppTheme.spaceMD),
@@ -123,7 +123,7 @@ class _PlanScreenState extends State<PlanScreen> {
                     ExerciseLibrary(
                       doneCounts: existing,
                       onSelect: (exercise) async {
-                        HapticFeedback.lightImpact();
+                        HitHaptics.lightImpact();
                         if (existing.containsKey(
                             exercise.name)) {
                           await DatabaseProvider.instance
@@ -151,127 +151,155 @@ class _PlanScreenState extends State<PlanScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final today = DateTime.now().weekday;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Plan')),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppTheme.spaceLG),
-        children: [
-          // ─── Day selector ──────────────────────────
-          Row(
-            children: [
-              for (var d = 1; d <= 7; d++)
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _selectDay(d),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 2),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 10),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: d == _selectedDay
-                                  ? AppTheme.accent
-                                  : theme.colorScheme
-                                      .surfaceContainerHighest,
-                              border: d == today
-                                  ? Border.all(
-                                      color: AppTheme.accent,
-                                      width: 1.5)
-                                  : null,
-                            ),
-                            child: Center(
-                              child: Text(
-                                _dayLetters[d - 1],
-                                style: theme.textTheme.labelMedium
-                                    ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: d == _selectedDay
-                                      ? Colors.white
-                                      : theme.colorScheme
-                                          .onSurfaceVariant,
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spaceLG),
+          children: [
+            const SizedBox(height: AppTheme.spaceMD),
+            const ScreenTitle('Plan',
+                subtitle: 'YOUR WEEKLY SPLIT'),
+
+            const SizedBox(height: AppTheme.spaceMD),
+            Row(
+              children: [
+                for (var d = 1; d <= 7; d++)
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _selectDay(d),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 2),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 10),
+                        child: Column(
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(
+                                  milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: d == _selectedDay
+                                    ? AppTheme.lime
+                                    : AppTheme.surfaceAlt,
+                                border: d == today
+                                    ? Border.all(
+                                        color:
+                                            AppTheme.limeSoft,
+                                        width: 1.5)
+                                    : Border.all(
+                                        color: AppTheme
+                                            .hairlineDark,
+                                        width: 1),
+                                boxShadow: d == _selectedDay
+                                    ? [
+                                        BoxShadow(
+                                          color: AppTheme.lime
+                                              .withValues(
+                                                  alpha: 0.25),
+                                          blurRadius: 10,
+                                          offset:
+                                              const Offset(0, 4),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  _dayLetters[d - 1],
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight:
+                                        FontWeight.w800,
+                                    color: d == _selectedDay
+                                        ? AppTheme.ink
+                                        : (d == today
+                                            ? AppTheme.lime
+                                            : AppTheme
+                                                .textMuted),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-
-          // ─── Day header ────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(
-                top: AppTheme.spaceLG, bottom: AppTheme.spaceMD),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _dayNames[_selectedDay - 1].toUpperCase(),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.8,
-                  ),
-                ),
-                Text(
-                  _items.isEmpty
-                      ? _selectedDay == today
-                          ? 'Nothing planned for today.'
-                          : 'Rest day — or tap below to plan it.'
-                      : '${_items.length} exercises planned',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
               ],
             ),
-          ),
 
-          // ─── Planned exercises ─────────────────────
-          ..._buildPlanList(theme),
-
-          const SizedBox(height: AppTheme.spaceMD),
-          FilledButton.icon(
-            onPressed: _showExercisePicker,
-            icon: const Icon(Icons.add_rounded, size: 22),
-            label: Text(_items.isEmpty
-                ? 'ADD EXERCISES'
-                : 'ADD / REMOVE'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(54),
-            ),
-          ),
-
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              'Tap a listed exercise in the picker again to remove it.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontSize: 10,
-                color: theme.colorScheme.onSurfaceVariant
-                    .withOpacity(0.7),
+            Padding(
+              padding: const EdgeInsets.only(
+                  top: AppTheme.spaceLG,
+                  bottom: AppTheme.spaceMD),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _dayNames[_selectedDay - 1].toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.8,
+                      color: AppTheme.text,
+                    ),
+                  ),
+                  Text(
+                    _items.isEmpty
+                        ? _selectedDay == today
+                            ? 'Nothing planned for today.'
+                            : 'Rest day — or tap below to plan it.'
+                        : '${_items.length} exercises planned',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 140),
-        ],
+
+            ..._buildPlanList(),
+
+            const SizedBox(height: AppTheme.spaceMD),
+            FilledButton.icon(
+              onPressed: _showExercisePicker,
+              icon: const Icon(Icons.add_rounded, size: 22),
+              label: Text(_items.isEmpty
+                  ? 'ADD EXERCISES'
+                  : 'ADD / REMOVE'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(54),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Tap a listed exercise in the picker again to remove it.',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+            ),
+            const SizedBox(height: 140),
+          ],
+        ),
       ),
     );
   }
 
-  List<Widget> _buildPlanList(ThemeData theme) {
+  List<Widget> _buildPlanList() {
     if (_items.isEmpty) {
       return [
         GlassCard(
@@ -281,24 +309,24 @@ class _PlanScreenState extends State<PlanScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color:
-                      theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(
-                      AppTheme.radiusMD),
+                  color: AppTheme.surfaceAlt,
+                  shape: BoxShape.circle,
+                  border: Border.fromBorderSide(
+                      BorderSide(color: AppTheme.hairlineDark)),
                 ),
-                child: Icon(Icons.event_available_outlined,
+                child: Icon(
+                    Icons.event_available_outlined,
                     size: 19,
-                    color:
-                        theme.colorScheme.onSurfaceVariant),
+                    color: AppTheme.textMuted),
               ),
               const SizedBox(width: AppTheme.spaceMD),
               Expanded(
                 child: Text(
                   'Plan your split once — every ${_dayNames[_selectedDay - 1]}, '
                   'your list is waiting on the workout screen.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color:
-                        theme.colorScheme.onSurfaceVariant,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textMuted,
                     height: 1.4,
                   ),
                 ),
@@ -311,12 +339,11 @@ class _PlanScreenState extends State<PlanScreen> {
 
     return [
       for (var i = 0; i < _items.length; i++)
-        _buildPlanRow(theme, _items[i], i + 1),
+        _buildPlanRow(_items[i], i + 1),
     ];
   }
 
-  Widget _buildPlanRow(
-      ThemeData theme, ScheduledExerciseRow item, int index) {
+  Widget _buildPlanRow(ScheduledExerciseRow item, int index) {
     final exercise =
         ExerciseCatalog.exerciseByName(item.exerciseName);
     final color =
@@ -328,7 +355,7 @@ class _PlanScreenState extends State<PlanScreen> {
         key: ValueKey('plan-${item.id}'),
         direction: DismissDirection.endToStart,
         onDismissed: (direction) {
-          HapticFeedback.lightImpact();
+          HitHaptics.lightImpact();
           DatabaseProvider.instance
               .deleteScheduledExercise(item.id);
         },
@@ -337,12 +364,12 @@ class _PlanScreenState extends State<PlanScreen> {
           padding:
               const EdgeInsets.only(right: AppTheme.spaceLG),
           decoration: BoxDecoration(
-            color: theme.colorScheme.errorContainer,
+            color: AppTheme.coral,
             borderRadius:
-                BorderRadius.circular(AppTheme.radiusLG),
+                BorderRadius.circular(AppTheme.radiusXL),
           ),
-          child: Icon(Icons.delete_outline,
-              color: theme.colorScheme.onErrorContainer),
+          child: const Icon(Icons.delete_outline_rounded,
+              color: Colors.white),
         ),
         child: GlassCard(
           padding: const EdgeInsets.symmetric(
@@ -355,11 +382,11 @@ class _PlanScreenState extends State<PlanScreen> {
                 width: 22,
                 child: Text(
                   '$index',
-                  style: theme.textTheme.labelMedium?.copyWith(
+                  style: TextStyle(
+                    fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color:
-                        theme.colorScheme.onSurfaceVariant,
-                    fontFeatures: const [
+                    color: AppTheme.textMuted,
+                    fontFeatures: [
                       FontFeature.tabularFigures()
                     ],
                   ),
@@ -370,7 +397,7 @@ class _PlanScreenState extends State<PlanScreen> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(
                       AppTheme.radiusSM),
                 ),
@@ -384,26 +411,26 @@ class _PlanScreenState extends State<PlanScreen> {
                   children: [
                     Text(
                       exercise.name,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.text,
                       ),
                     ),
                     Text(
                       exercise.muscleGroup,
-                      style:
-                          theme.textTheme.bodySmall?.copyWith(
-                        color:
-                            theme.colorScheme.onSurfaceVariant,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppTheme.textMuted,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
+               Icon(
+                Icons.chevron_right_rounded,
                 size: 18,
-                color: theme.colorScheme.onSurfaceVariant
-                    .withOpacity(0.5),
+                color: AppTheme.textMuted,
               ),
             ],
           ),

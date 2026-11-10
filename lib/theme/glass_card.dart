@@ -1,53 +1,71 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
-/// Flat surface card with a hairline border.
-/// `gradient` (accent wash) is available for primary CTAs.
+import 'app_theme.dart';
+
 class GlassCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  final EdgeInsetsGeometry? margin;
-  final BorderRadius? radius;
-  final VoidCallback? onTap;
-  final Gradient? gradient;
-
   const GlassCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(AppTheme.spaceMD),
-    this.margin,
-    this.radius,
     this.onTap,
+    this.padding = const EdgeInsets.all(AppTheme.spaceLG),
+    this.color,
     this.gradient,
+    this.radius,
+    this.borderColor,
+    this.glow = false,
   });
+
+  final Widget child;
+
+  final VoidCallback? onTap;
+
+  final EdgeInsetsGeometry padding;
+
+  final Color? color;
+
+  final Gradient? gradient;
+
+  final double? radius;
+
+  final Color? borderColor;
+
+  final bool glow;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final r = radius ?? BorderRadius.circular(AppTheme.radiusLG);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final r = radius ?? AppTheme.radiusXL;
+
+    final edge = borderColor ??
+        (dark ? AppTheme.hairlineDark : AppTheme.hairlineLight);
 
     final card = Container(
-      margin: margin,
       decoration: BoxDecoration(
-        gradient: gradient,
         color: gradient == null
-            ? (isDark
-                ? AppTheme.surfaceDark
-                : AppTheme.surfaceLight)
+            ? (color ?? (dark ? AppTheme.surface : Colors.white))
             : null,
-        borderRadius: r,
-        border: gradient == null
-            ? Border.all(color: AppTheme.hairline(theme.brightness))
-            : null,
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(r),
+        border: Border.all(color: edge, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: dark
+                ? Colors.black.withValues(alpha: 0.35)
+                : Colors.black.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+          if (glow)
+            BoxShadow(
+              color: AppTheme.lime.withValues(alpha: dark ? 0.20 : 0.32),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+        ],
       ),
       child: Padding(padding: padding, child: child),
     );
 
-    if (onTap == null) return card;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(onTap: onTap, borderRadius: r, child: card),
-    );
+    return onTap == null ? card : GestureDetector(onTap: onTap, child: card);
   }
 }

@@ -1,0 +1,62 @@
+name: Release
+
+# ─────────────────────────────────────────────────────────────────────────
+# Ship an update: bump `version:` in pubspec.yaml, commit, tag, push both.
+#
+#   git add -A && git commit -m "v1.3.0"
+#   git tag v1.3.0
+#   git push origin main v1.3.0
+#
+# This workflow then builds the release APKs and publishes them as a
+# GitHub Release. Every installed app detects the new release on its next
+# launch and offers a one-tap in-app update.
+# ─────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # required to create the Release
+
+jobs:
+  android:
+    name: Build & publish Android release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test (only if the project has tests)
+        run: flutter test
+        if: hashFiles('test/**/*.dart') != ''
+
+      # Split per ABI: smaller downloads, and the in-app updater picks the
+      # APK matching the device's CPU automatically (arm64-v8a for the
+      # Galaxy A14).
+      - name: Build release APKs (split per ABI)
+        run: flutter build apk --release --split-per-abi
+
+      # Universal APK as fallback for exotic ABIs. Optional — delete this
+      # step if you don't want it on the release page.
+      - name: Build universal APK
+        run: flutter build apk --release
+
+      - name: Publish GitHub Release with APKs
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: build/app/outputs/flutter-apk/*.apk

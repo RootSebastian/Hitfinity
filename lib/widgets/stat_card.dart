@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// A compact stat display: big number + small label.
-/// Used in the active workout header and home dashboard.
 class StatCard extends StatelessWidget {
   final String value;
   final String label;
@@ -20,30 +18,57 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final effectiveColor = color ?? theme.colorScheme.primary;
+    final effectiveColor =
+        color ?? theme.colorScheme.primary;
+    final hairline = AppTheme.hairline(theme.brightness);
 
     return Container(
-      padding: const EdgeInsets.all(AppTheme.spaceMD),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: effectiveColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+        color: AppTheme.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+        border: Border.all(color: hairline),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: effectiveColor, size: 20),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: effectiveColor.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: effectiveColor,
+              size: 18,
+            ),
+          ),
           const SizedBox(height: AppTheme.spaceSM),
           Text(
             value,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: 19,
               color: effectiveColor,
+              fontFeatures: const [
+                FontFeature.tabularFigures()
+              ],
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
             label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: AppTheme.textMuted,
             ),
           ),
         ],

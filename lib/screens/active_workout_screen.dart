@@ -7,8 +7,11 @@ import '../database/database_provider.dart';
 import '../models/models.dart';
 import '../models/workout_draft.dart';
 import '../theme/app_theme.dart';
+import '../theme/glass_card.dart';
+import '../widgets/hit_widgets.dart';
 import '../widgets/exercise_library.dart';
 import '../data/exercise_catalog.dart';
+import '../services/hit_settings.dart';
 
 class ActiveWorkoutScreen extends StatefulWidget {
   final WorkoutSessionWithSets? editingSession;
@@ -23,10 +26,6 @@ class ActiveWorkoutScreen extends StatefulWidget {
 class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   bool get _isEditing => widget.editingSession != null;
 
-  // FIXED: was `late final` — final means "assign once," but the
-  // draft restore assigns this a SECOND time after initState
-  // already set it. That reassignment threw LateInitializationError,
-  // which silently killed the restore. Plain `late` allows it.
   late DateTime _startTime;
 
   final List<SetLog> _sets = [];
@@ -34,7 +33,6 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   Timer? _timer;
   Duration _elapsed = Duration.zero;
 
-  // ─── Today's plan (live mode only) ─────────────────
   List<ScheduledExerciseRow> _todayPlan = [];
   StreamSubscription<List<ScheduledExerciseRow>>? _planSub;
 
@@ -81,9 +79,6 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     super.dispose();
   }
 
-  /// Restores a draft workout (app was closed mid-session).
-  /// Sets + the original start time come back; the wall-clock
-  /// timer picks up right where it left off.
   Future<void> _loadDraft() async {
     final draft = await DatabaseProvider.instance.getWorkoutDraft();
     if (!mounted || draft == null || draft.sets.isEmpty) return;
@@ -173,119 +168,170 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Session' : 'Active Workout'),
-        automaticallyImplyLeading: _isEditing,
-        actions: [
-          if (!_isEditing)
-            IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: 'Discard session',
-              onPressed: _confirmDiscard,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _buildHeader(),
+            _buildHeroTimer(),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.only(
+                    bottom: AppTheme.spaceXL),
+                children: [
+                  if (!_isEditing && _todayPlan.isNotEmpty) ...[
+                    SectionHeader(
+                      'TODAY\'S PLAN',
+                      trailing: Text(
+                        _planRemaining > 0
+                            ? '$_planRemaining left • tap to log'
+                            : 'all done ✓',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ),
+                    _buildPlanChips(),
+                    const SizedBox(height: AppTheme.spaceMD),
+                  ],
+
+                  if (_sets.isNotEmpty) ...[
+                    SectionHeader(
+                      _isEditing
+                          ? 'SESSION EXERCISES'
+                          : 'TODAY\'S EXERCISES',
+                      trailing: Text(
+                        _isEditing
+                            ? 'tap a set to edit it'
+                            : '${_setsByExercise.length} done',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ),
+                    ..._buildTodayCards(),
+                    const SizedBox(height: AppTheme.spaceMD),
+                  ] else
+                    _buildFirstSetHint(),
+                   SectionHeader('EXERCISE LIBRARY',
+                      trailing: Text(
+                        'tap to log a set',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: AppTheme.textMuted,
+                        ),
+                      )),
+                  const SizedBox(height: AppTheme.spaceSM),
+                  ExerciseLibrary(
+                    doneCounts: _doneCounts,
+                    onSelect: (ex) => _showLogSetDialog(ex),
+                  ),
+                ],
+              ),
             ),
-          Padding(
-            padding: const EdgeInsets.only(right: AppTheme.spaceSM),
-            child: FilledButton.tonal(
-              onPressed: _sets.isEmpty ? null : _confirmFinish,
-              child: Text(_isEditing ? 'Save' : 'Finish'),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
-      body: Column(
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppTheme.spaceMD, AppTheme.spaceSM, AppTheme.spaceMD, 0),
+      child: Row(
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              vertical: AppTheme.spaceLG,
-              horizontal: AppTheme.spaceMD,
+          if (_isEditing)
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => Navigator.of(context).maybePop(),
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceAlt,
+                    shape: BoxShape.circle,
+                    border: Border.fromBorderSide(
+                        BorderSide(color: AppTheme.hairlineDark)),
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_rounded,
+                    size: 20,
+                    color: AppTheme.text,
+                  ),
+                ),
+              ),
             ),
-            decoration: const BoxDecoration(
-              gradient: AppTheme.heroGradient,
-            ),
+          if (_isEditing) const SizedBox(width: AppTheme.spaceMD),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _formattedElapsed,
-                  style: theme.textTheme.displayMedium?.copyWith(
+                  _isEditing ? 'Edit Session' : 'Active Workout',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: 2,
-                    fontFeatures: [const FontFeature.tabularFigures()],
+                    letterSpacing: -0.3,
+                    color: AppTheme.text,
                   ),
                 ),
-                if (_isEditing) ...[
-                  const SizedBox(height: AppTheme.spaceXS),
-                  Text(
-                    'EDITING • '
-                    '${DateFormat('EEE, MMM d • HH:mm').format(_startTime)}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: Colors.white.withOpacity(0.8),
-                      letterSpacing: 1,
-                    ),
+                const SizedBox(height: 2),
+                Text(
+                  _isEditing
+                      ? DateFormat('EEE, MMM d • HH:mm')
+                          .format(_startTime)
+                      : 'Timer running — log sets live',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: AppTheme.textMuted,
                   ),
-                ],
-                const SizedBox(height: AppTheme.spaceMD),
-                Row(
-                  children: [
-                    _heroStat('${_sets.length}', 'SETS', Icons.repeat),
-                    _heroStat('${_setsByExercise.length}',
-                        'EXERCISES', Icons.list),
-                    _heroStat(
-                        '${_sets.fold(0, (a, b) => a + b.reps)}',
-                        'REPS',
-                        Icons.tag),
-                    _heroStat(
-                      _maxWeight != null
-                          ? _fmtWeight(_maxWeight!)
-                          : '—',
-                      'HEAVIEST KG',
-                      Icons.monitor_weight,
-                    ),
-                  ],
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: AppTheme.spaceXL),
-              children: [
-                // ── TODAY'S PLAN (quick-log chips) ──
-                if (!_isEditing && _todayPlan.isNotEmpty) ...[
-                  _sectionTitle(
-                    'TODAY\'S PLAN',
-                    _planRemaining > 0
-                        ? '$_planRemaining left • tap to log'
-                        : 'all done ✓',
+          const SizedBox(width: AppTheme.spaceSM),
+          if (!_isEditing)
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: _confirmDiscard,
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceAlt,
+                    shape: BoxShape.circle,
+                    border: Border.fromBorderSide(
+                        BorderSide(color: AppTheme.hairlineDark)),
                   ),
-                  _buildPlanChips(theme),
-                  const SizedBox(height: AppTheme.spaceMD),
-                ],
-
-                if (_sets.isNotEmpty) ...[
-                  _sectionTitle(
-                    _isEditing
-                        ? 'SESSION EXERCISES'
-                        : 'TODAY\'S EXERCISES',
-                    _isEditing
-                        ? 'tap a set to edit it'
-                        : '${_setsByExercise.length} done',
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color: AppTheme.textMuted,
                   ),
-                  ..._buildTodayCards(),
-                  const SizedBox(height: AppTheme.spaceMD),
-                ] else
-                  _buildFirstSetHint(),
-                _sectionTitle('EXERCISE LIBRARY', 'tap to log a set'),
-                const SizedBox(height: AppTheme.spaceSM),
-                ExerciseLibrary(
-                  doneCounts: _doneCounts,
-                  onSelect: (ex) => _showLogSetDialog(ex),
                 ),
-              ],
+              ),
+            ),
+          const SizedBox(width: AppTheme.spaceSM),
+
+          FilledButton(
+            onPressed: _sets.isEmpty ? null : _confirmFinish,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 42),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+            ),
+            child: Text(
+              _isEditing ? 'Save' : 'Finish',
+              style: const TextStyle(fontSize: 13),
             ),
           ),
         ],
@@ -293,7 +339,75 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     );
   }
 
-  Widget _buildPlanChips(ThemeData theme) {
+  Widget _buildHeroTimer() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(
+          AppTheme.spaceLG, AppTheme.spaceMD, AppTheme.spaceLG, 0),
+      padding: const EdgeInsets.symmetric(
+        vertical: AppTheme.spaceLG,
+        horizontal: AppTheme.spaceMD,
+      ),
+      decoration: BoxDecoration(
+        gradient: AppTheme.heroGradient,
+        borderRadius: BorderRadius.circular(AppTheme.radiusXL),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.lime.withValues(alpha: 0.18),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            _formattedElapsed,
+            style:       TextStyle(
+              fontSize: 44,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.ink,
+              letterSpacing: 2,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+          if (_isEditing) ...[
+            const SizedBox(height: AppTheme.spaceXS),
+            Text(
+              'EDITING • '
+              '${DateFormat('EEE, MMM d • HH:mm').format(_startTime)}',
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 1,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.ink.withValues(alpha: 0.62),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppTheme.spaceMD),
+          Row(
+            children: [
+              _heroStat('${_sets.length}', 'SETS',
+                  Icons.repeat_rounded),
+              _heroStat('${_setsByExercise.length}', 'EXERCISES',
+                  Icons.list_rounded),
+              _heroStat(
+                  '${_sets.fold(0, (a, b) => a + b.reps)}',
+                  'REPS',
+                  Icons.tag_rounded),
+              _heroStat(
+                _maxWeight != null ? _fmtWeight(_maxWeight!) : '—',
+                'HEAVIEST KG',
+                Icons.monitor_weight_rounded,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlanChips() {
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppTheme.spaceMD),
@@ -301,14 +415,13 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
         spacing: 8,
         runSpacing: 8,
         children: [
-          for (final item in _todayPlan)
-            _planChip(theme, item),
+          for (final item in _todayPlan) _planChip(item),
         ],
       ),
     );
   }
 
-  Widget _planChip(ThemeData theme, ScheduledExerciseRow item) {
+  Widget _planChip(ScheduledExerciseRow item) {
     final exercise =
         ExerciseCatalog.exerciseByName(item.exerciseName);
     final done = _doneCounts[exercise.name] ?? 0;
@@ -319,7 +432,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(AppTheme.radiusMD),
       onTap: () {
-        HapticFeedback.lightImpact();
+        HitHaptics.lightImpact();
         _showLogSetDialog(exercise);
       },
       child: Container(
@@ -327,40 +440,42 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
             horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
           color: isDone
-              ? theme.colorScheme.primaryContainer
-              : theme.colorScheme.surfaceContainerHighest,
+              ? AppTheme.lime.withValues(alpha: 0.14)
+              : AppTheme.surfaceAlt,
           borderRadius:
               BorderRadius.circular(AppTheme.radiusMD),
           border: Border.all(
             color: isDone
-                ? AppTheme.accent
-                : AppTheme.hairline(theme.brightness),
+                ? AppTheme.lime
+                : AppTheme.hairlineDark,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(exercise.icon,
-                size: 15, color: isDone ? AppTheme.accent : color),
+                size: 15, color: isDone ? AppTheme.lime : color),
             const SizedBox(width: 7),
             Text(
               exercise.name,
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
                 color: isDone
-                    ? AppTheme.accent
-                    : theme.colorScheme.onSurface,
+                    ? AppTheme.lime
+                    : AppTheme.text,
               ),
             ),
             if (isDone) ...[
               const SizedBox(width: 6),
-              Icon(Icons.check_rounded,
-                  size: 13, color: AppTheme.accent),
+                    Icon(Icons.check_rounded,
+                  size: 13, color: AppTheme.lime),
               const SizedBox(width: 2),
               Text(
                 '$done',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppTheme.accent,
+                style:       TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.lime,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -372,53 +487,29 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   }
 
   Widget _heroStat(String value, String label, IconData icon) {
-    final theme = Theme.of(context);
     return Expanded(
       child: Column(
         children: [
-          Icon(icon, size: 16, color: Colors.white.withOpacity(0.8)),
+          Icon(icon,
+              size: 16,
+              color: AppTheme.ink.withValues(alpha: 0.7)),
           const SizedBox(height: 4),
           Text(
             value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+            style:       TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.ink,
+              fontFeatures: [FontFeature.tabularFigures()],
             ),
           ),
           Text(
             label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.white.withOpacity(0.7),
-              letterSpacing: 0.8,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String title, String subtitle) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppTheme.spaceLG, vertical: AppTheme.spaceSM),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: theme.textTheme.labelLarge?.copyWith(
-              letterSpacing: 1.5,
+            style: TextStyle(
+              fontSize: 9,
               fontWeight: FontWeight.w700,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(width: AppTheme.spaceSM),
-          Expanded(
-            child: Text(
-              '• $subtitle',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              letterSpacing: 1.2,
+              color: AppTheme.ink.withValues(alpha: 0.62),
             ),
           ),
         ],
@@ -427,36 +518,42 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   }
 
   Widget _buildFirstSetHint() {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.all(AppTheme.spaceMD),
-      padding: const EdgeInsets.all(AppTheme.spaceLG),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.touch_app, color: AppTheme.accent, size: 32),
-          const SizedBox(width: AppTheme.spaceMD),
-          Expanded(
-            child: Text(
-              _isEditing
-                  ? 'All sets were removed. Pick exercises below to rebuild this session.'
-                  : 'Timer is running! Tap your plan above, or any exercise below, to log your first set.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface,
+    return Padding(
+      padding: const EdgeInsets.all(AppTheme.spaceMD),
+      child: GlassCard(
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppTheme.lime.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child:       Icon(Icons.touch_app_rounded,
+                  color: AppTheme.lime, size: 24),
+            ),
+            const SizedBox(width: AppTheme.spaceMD),
+            Expanded(
+              child: Text(
+                _isEditing
+                    ? 'All sets were removed. Pick exercises below to rebuild this session.'
+                    : 'Timer is running! Tap your plan above, or any exercise below, to log your first set.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.text,
+                  height: 1.45,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   List<Widget> _buildTodayCards() {
     final byExercise = _setsByExercise;
-    final theme = Theme.of(context);
 
     final order = <String>[];
     for (final s in _sets) {
@@ -471,153 +568,148 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
       final color = ExerciseCatalog.colorFor(exercise.muscleGroup);
       final isExpanded = _expandedExercises.contains(name);
 
-      return Container(
-        margin: const EdgeInsets.symmetric(
+      return Padding(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppTheme.spaceMD,
           vertical: AppTheme.spaceXS,
         ),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-          border: Border.all(
-            color:
-                theme.colorScheme.outlineVariant.withOpacity(0.4),
-          ),
-        ),
-        child: Column(
-          children: [
-            InkWell(
-              borderRadius:
-                  BorderRadius.circular(AppTheme.radiusMD),
-              onTap: () => setState(() {
-                isExpanded
-                    ? _expandedExercises.remove(name)
-                    : _expandedExercises.add(name);
-              }),
-              child: Padding(
-                padding: const EdgeInsets.all(AppTheme.spaceMD),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(
-                            AppTheme.radiusSM),
+        child: GlassCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              InkWell(
+                borderRadius:
+                    BorderRadius.circular(AppTheme.radiusXL),
+                onTap: () => setState(() {
+                  isExpanded
+                      ? _expandedExercises.remove(name)
+                      : _expandedExercises.add(name);
+                }),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppTheme.spaceMD),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(
+                              AppTheme.radiusSM),
+                        ),
+                        child: Icon(exercise.icon,
+                            color: color, size: 20),
                       ),
-                      child: Icon(exercise.icon,
-                          color: color, size: 20),
-                    ),
-                    const SizedBox(width: AppTheme.spaceMD),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            exercise.name,
-                            style:
-                                theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
+                      const SizedBox(width: AppTheme.spaceMD),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              exercise.name,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.text,
+                              ),
                             ),
-                          ),
-                          Text(
-                            _exerciseWeightsLabel(sets),
-                            style:
-                                theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme
-                                  .onSurfaceVariant,
+                            Text(
+                              _exerciseWeightsLabel(sets),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: AppTheme.textMuted,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.add_circle,
-                          color: AppTheme.accent),
-                      onPressed: () =>
-                          _showLogSetDialog(exercise),
-                    ),
-                    Icon(
-                      isExpanded
-                          ? Icons.expand_less
-                          : Icons.expand_more,
-                      color:
-                          theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ],
+                      IconButton(
+                        icon:       Icon(Icons.add_circle_rounded,
+                            color: AppTheme.lime),
+                        onPressed: () =>
+                            _showLogSetDialog(exercise),
+                      ),
+                      Icon(
+                        isExpanded
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
+                        color: AppTheme.textMuted,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            if (isExpanded)
-              ...sets.map((set) {
-                final globalIndex = _sets.indexOf(set);
-                return Container(
-                  margin: const EdgeInsets.only(
-                    left: AppTheme.spaceMD,
-                    right: AppTheme.spaceMD,
-                    bottom: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme
-                        .colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(
-                        AppTheme.radiusSM),
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(
-                        AppTheme.radiusSM),
-                    onTap: () => _showLogSetDialog(
-                      set.exercise,
-                      editingSet: set,
+              if (isExpanded)
+                ...sets.map((set) {
+                  final globalIndex = _sets.indexOf(set);
+                  return Container(
+                    margin: const EdgeInsets.only(
+                      left: AppTheme.spaceMD,
+                      right: AppTheme.spaceMD,
+                      bottom: 4,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.spaceSM,
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceAlt,
+                      borderRadius: BorderRadius.circular(
+                          AppTheme.radiusSM),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(
+                          AppTheme.radiusSM),
+                      onTap: () => _showLogSetDialog(
+                        set.exercise,
+                        editingSet: set,
                       ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 28,
-                            child: Text(
-                              '${set.setNumber}',
-                              style: theme.textTheme.labelMedium
-                                  ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: color,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spaceSM,
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 28,
+                              child: Text(
+                                '${set.setNumber}',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: color,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                              textAlign: TextAlign.center,
                             ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              set.weightKg != null &&
-                                      set.weightKg! > 0
-                                  ? '${set.reps} reps × ${_fmtWeight(set.weightKg!)} kg'
-                                  : '${set.reps} reps',
-                              style: theme.textTheme.bodyMedium,
+                            Expanded(
+                              child: Text(
+                                set.weightKg != null &&
+                                        set.weightKg! > 0
+                                    ? '${set.reps} reps × ${_fmtWeight(set.weightKg!)} kg'
+                                    : '${set.reps} reps',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.text,
+                                ),
+                              ),
                             ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.close,
-                                size: 16,
-                                color: theme.colorScheme
-                                    .onSurfaceVariant),
-                            onPressed: () =>
-                                _removeSet(globalIndex),
-                            visualDensity:
-                                VisualDensity.compact,
-                          ),
-                        ],
+                            IconButton(
+                              icon: Icon(Icons.close_rounded,
+                                  size: 16,
+                                  color: AppTheme.textMuted),
+                              onPressed: () =>
+                                  _removeSet(globalIndex),
+                              visualDensity:
+                                  VisualDensity.compact,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }),
-            if (isExpanded)
-              const SizedBox(height: AppTheme.spaceSM),
-          ],
+                  );
+                }),
+              if (isExpanded)
+                const SizedBox(height: AppTheme.spaceSM),
+            ],
+          ),
         ),
       );
     }).toList();
@@ -699,7 +791,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius:
                       BorderRadius.circular(AppTheme.radiusSM),
                 ),
@@ -728,7 +820,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Reps',
                   hintText: '10',
-                  prefixIcon: Icon(Icons.repeat),
+                  prefixIcon: Icon(Icons.repeat_rounded),
                 ),
                 autofocus: true,
               ),
@@ -818,10 +910,10 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   }
 
   void _confirmDiscard() {
-    HapticFeedback.mediumImpact();
+    HitHaptics.mediumImpact();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Discard session?'),
         content: Text(
           _sets.isEmpty
@@ -830,12 +922,16 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Keep going'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.coral,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               await DatabaseProvider.instance
                   .clearWorkoutDraft();
               if (mounted) Navigator.pop(context);
@@ -870,10 +966,11 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
 
     if (!mounted) return;
 
-    HapticFeedback.mediumImpact();
+    HitHaptics.mediumImpact();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(
             _isEditing ? 'Save Changes?' : 'Finish Workout?'),
         content: Text(
@@ -883,17 +980,19 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(
                 _isEditing ? 'Keep Editing' : 'Keep Logging'),
           ),
           FilledButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
+
               if (!_isEditing) {
                 await DatabaseProvider.instance
                     .clearWorkoutDraft();
               }
+
               if (mounted) {
                 Navigator.pop(
                   context,

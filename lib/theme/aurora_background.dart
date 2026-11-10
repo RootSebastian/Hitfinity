@@ -1,12 +1,15 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
-/// Ultra-subtle ambient light: one warm glow drifting slowly.
-/// Barely there — depth without decoration.
+import '../services/hit_settings.dart';
+
 class AuroraBackground extends StatefulWidget {
   final Widget child;
+
   final bool enabled;
+
   const AuroraBackground({
     super.key,
     required this.child,
@@ -22,26 +25,75 @@ class _AuroraBackgroundState extends State<AuroraBackground>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 30),
-  )..repeat();
+  );
+
+  static const int _steps = 360;
+
+  static const double _frozenT = 0.5;
+
+  @override
+  void initState() {
+    super.initState();
+    HitSettings.I.aurora.addListener(_syncController);
+    _syncController();
+  }
+
+  @override
+  void didUpdateWidget(covariant AuroraBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncController();
+  }
 
   @override
   void dispose() {
+    HitSettings.I.aurora.removeListener(_syncController);
     _controller.dispose();
     super.dispose();
   }
 
+  void _syncController() {
+    final on = widget.enabled && HitSettings.I.aurora.value;
+    if (on && !_controller.isAnimating) {
+      _controller.repeat();
+    } else if (!on && _controller.isAnimating) {
+      _controller.stop();
+    }
+  }
+
+  double _quantized() => (_controller.value * _steps).floor() / _steps;
+
   @override
   Widget build(BuildContext context) {
-    if (!widget.enabled) return widget.child;
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) => CustomPaint(
-        painter: _AmbientPainter(
-          t: _controller.value,
-          scheme: Theme.of(context).colorScheme,
-        ),
-        child: widget.child,
-      ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: HitSettings.I.aurora,
+      builder: (context, auroraOn, _) {
+        if (!widget.enabled || !auroraOn) return widget.child;
+
+        final reduceMotion =
+            MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+        if (reduceMotion) {
+          return CustomPaint(
+            painter: _AmbientPainter(
+              t: _frozenT,
+              scheme: Theme.of(context).colorScheme,
+            ),
+            child: RepaintBoundary(child: widget.child),
+          );
+        }
+
+        return AnimatedBuilder(
+          animation: _controller,
+          child: RepaintBoundary(child: widget.child),
+          builder: (context, child) => CustomPaint(
+            painter: _AmbientPainter(
+              t: _quantized(),
+              scheme: Theme.of(context).colorScheme,
+            ),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
@@ -63,35 +115,50 @@ class _AmbientPainter extends CustomPainter {
         Paint()
           ..shader = ui.Gradient.radial(center, radius, [
             color,
-            color.withOpacity(0.0),
+            color.withValues(alpha: 0.0),
           ]),
       );
     }
 
     final w = size.width, h = size.height;
-    // One warm accent glow, very low opacity, drifting
+    final dark = scheme.brightness == Brightness.dark;
+
+    final aLime = dark ? 0.10 : 0.05;
+    final aMint = dark ? 0.07 : 0.035;
+    final aSky = dark ? 0.045 : 0.025;
+
     glow(
-      scheme.primary.withOpacity(0.07),
+      scheme.primary.withValues(alpha: aLime),
       Offset(
-        w * (0.20 + 0.08 * _wave(t, 0)),
-        h * (0.10 + 0.06 * _wave(t, .4)),
+        w * (0.18 + 0.10 * _wave(t, 0)),
+        h * (0.09 + 0.05 * _wave(t, .4)),
       ),
-      w * 0.55,
+      w * 0.62,
     );
-    // One cool neutral glow opposite
+
     glow(
-      (scheme.brightness == Brightness.dark
-              ? Colors.white
-              : Colors.black)
-          .withOpacity(0.04),
+      scheme.secondary.withValues(alpha: aMint),
       Offset(
-        w * (0.85 - 0.06 * _wave(t, .6)),
-        h * (0.45 + 0.10 * _wave(t, .2)),
+        w * (0.86 - 0.08 * _wave(t, .6)),
+        h * (0.38 + 0.10 * _wave(t, .2)),
       ),
-      w * 0.5,
+      w * 0.52,
+    );
+
+    glow(
+      scheme.tertiary.withValues(alpha: aSky),
+      Offset(
+        w * (0.32 + 0.12 * _wave(t, .3)),
+        h * (0.86 - 0.06 * _wave(t, .8)),
+      ),
+      w * 0.46,
     );
   }
 
   @override
-  bool shouldRepaint(_AmbientPainter old) => true;
+  bool shouldRepaint(_AmbientPainter old) =>
+      old.t != t ||
+      old.scheme.primary != scheme.primary ||
+      old.scheme.secondary != scheme.secondary ||
+      old.scheme.tertiary != scheme.tertiary;
 }

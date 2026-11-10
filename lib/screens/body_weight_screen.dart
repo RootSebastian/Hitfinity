@@ -8,6 +8,8 @@ import '../database/database_provider.dart';
 import '../data/food_catalog.dart';
 import '../theme/app_theme.dart';
 import '../theme/glass_card.dart';
+import '../widgets/hit_widgets.dart';
+import '../services/hit_settings.dart';
 
 class BodyWeightScreen extends StatefulWidget {
   const BodyWeightScreen({super.key});
@@ -17,37 +19,27 @@ class BodyWeightScreen extends StatefulWidget {
 }
 
 class _BodyScreenState extends State<BodyWeightScreen> {
-  int _selectedView = 0; // 0 = Weight, 1 = Diet, 2 = Water
+  int _selectedView = 0;
 
   final NumberFormat _fmt = NumberFormat('#,##0.0');
   final NumberFormat _fmtInt = NumberFormat('#,##0');
 
-  static const _proteinColor = Color(0xFF7DB2FF);
-  static const _carbColor = Color(0xFF6EE7A0);
-  static const _fatColor = Color(0xFFFBBF68);
+  static const _proteinColor = AppTheme.protein;
+  static const _carbColor = AppTheme.carbs;
+  static const _fatColor = AppTheme.fat;
 
-  // ─── WEIGHT state ─────────────────────────────────
   late final Stream<List<BodyWeightRow>> _weightsStream =
       DatabaseProvider.instance.watchBodyWeights();
 
   final _inputCtrl = TextEditingController();
   String? _inputError;
 
-  // ─── DIET state ───────────────────────────────────
   late final Stream<List<FoodEntryRow>> _foodStream =
       DatabaseProvider.instance
           .watchFoodEntriesForDay(DateTime.now());
 
   DietGoals _goals = const DietGoals();
   StreamSubscription<DietGoals>? _goalsSub;
-
-  // ─── WATER state ──────────────────────────────────
-  late final Stream<List<WaterEntryRow>> _waterStream =
-      DatabaseProvider.instance
-          .watchWaterForDay(DateTime.now());
-
-  int _waterGoalMl = 2500;
-  StreamSubscription<int>? _waterGoalSub;
 
   @override
   void initState() {
@@ -56,32 +48,21 @@ class _BodyScreenState extends State<BodyWeightScreen> {
         DatabaseProvider.instance.watchDietGoals().listen((g) {
       if (mounted) setState(() => _goals = g);
     });
-    _waterGoalSub = DatabaseProvider.instance
-        .watchWaterGoal()
-        .listen((ml) {
-      if (mounted) setState(() => _waterGoalMl = ml);
-    });
   }
 
   @override
   void dispose() {
     _inputCtrl.dispose();
     _goalsSub?.cancel();
-    _waterGoalSub?.cancel();
     super.dispose();
   }
-
-  // ═════════════════════════════════════════════════
-  // WEIGHT LOGIC
-  // ═════════════════════════════════════════════════
 
   Future<void> _saveWeight() async {
     final text = _inputCtrl.text.trim().replaceAll(',', '.');
     final value = double.tryParse(text);
 
     if (value == null || value <= 20 || value >= 400) {
-      setState(
-          () => _inputError = 'Enter a valid weight (e.g., 74.5)');
+      setState(() => _inputError = 'Enter a valid weight (e.g., 74.5)');
       return;
     }
 
@@ -91,13 +72,9 @@ class _BodyScreenState extends State<BodyWeightScreen> {
     if (mounted) {
       _inputCtrl.clear();
       setState(() => _inputError = null);
-      HapticFeedback.mediumImpact();
+      HitHaptics.mediumImpact();
     }
   }
-
-  // ═════════════════════════════════════════════════
-  // DIET LOGIC
-  // ═════════════════════════════════════════════════
 
   Future<void> _showFoodPicker() async {
     final searchCtrl = TextEditingController();
@@ -115,16 +92,14 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                 FoodCatalog.search(searchCtrl.text, category);
 
             return Container(
-              height: MediaQuery.of(sheetContext).size.height *
-                  0.85,
+              height:
+                  MediaQuery.of(sheetContext).size.height * 0.85,
               decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(24)),
+                color: AppTheme.surfaceAlt,
+                borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(AppTheme.radius2XL)),
                 border: Border(
-                  top: BorderSide(
-                      color: AppTheme.hairline(
-                          theme.brightness)),
+                  top: BorderSide(color: AppTheme.hairlineDark),
                 ),
               ),
               child: Column(
@@ -134,7 +109,7 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.outlineVariant,
+                      color: AppTheme.track,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -170,7 +145,7 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                       controller: searchCtrl,
                       autofocus: false,
                       decoration: const InputDecoration(
-                        hintText: 'Search 160+ foods…',
+                        hintText: 'Search 75+ foods…',
                         prefixIcon: Icon(Icons.search),
                         isDense: true,
                       ),
@@ -186,30 +161,16 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                           horizontal: AppTheme.spaceMD),
                       itemCount:
                           FoodCatalog.categories.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           const SizedBox(width: 6),
                       itemBuilder: (context, index) {
                         final c =
                             FoodCatalog.categories[index];
-                        final selected = c == category;
-                        return FilterChip(
-                          label: Text(c),
-                          selected: selected,
-                          showCheckmark: false,
-                          onSelected: (_) =>
-                              setSheetState(() => category = c),
-                          backgroundColor: theme.colorScheme
-                              .surfaceContainerHighest,
-                          selectedColor: AppTheme.accent,
-                          labelStyle: TextStyle(
-                            color: selected
-                                ? Colors.white
-                                : theme.colorScheme
-                                    .onSurfaceVariant,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
+                        return HitChip(
+                          label: c,
+                          selected: c == category,
+                          onTap: () => setSheetState(
+                              () => category = c),
                         );
                       },
                     ),
@@ -220,8 +181,7 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                         ? Center(
                             child: Text(
                               'No foods found',
-                              style: theme
-                                  .textTheme.bodyLarge
+                              style: theme.textTheme.bodyLarge
                                   ?.copyWith(
                                 color: theme.colorScheme
                                     .onSurfaceVariant,
@@ -239,7 +199,10 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                                 title: Text(
                                   food.name,
                                   style: theme.textTheme
-                                      .titleSmall,
+                                      .titleSmall?.copyWith(
+                                    fontWeight:
+                                        FontWeight.w600,
+                                  ),
                                 ),
                                 subtitle: Text(
                                   '${food.kcal.round()} kcal / 100 ${food.unit}\n'
@@ -250,9 +213,10 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                                       theme.textTheme.bodySmall,
                                 ),
                                 isThreeLine: true,
-                                trailing: const Icon(
-                                    Icons.add_circle_outline,
-                                    size: 20),
+                                trailing:       Icon(
+                                    Icons.add_circle,
+                                    size: 20,
+                                    color: AppTheme.lime),
                                 onTap: () {
                                   Navigator.pop(sheetContext);
                                   _showAmountDialog(food);
@@ -262,14 +226,15 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                           ),
                   ),
                   Padding(
-                    padding:
-                        const EdgeInsets.all(AppTheme.spaceMD),
+                    padding: const EdgeInsets.all(
+                        AppTheme.spaceMD),
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(sheetContext);
                         _showQuickCaloriesDialog();
                       },
-                      icon: const Icon(Icons.bolt, size: 18),
+                      icon: const Icon(Icons.bolt,
+                          size: 18),
                       label: const Text(
                           'Quick add — calories only'),
                       style: OutlinedButton.styleFrom(
@@ -318,7 +283,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
               title: Text(food.name),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   TextField(
                     controller: amountCtrl,
@@ -355,7 +321,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                       if (food.servings.isEmpty)
                         for (final g in [50, 100, 150, 200])
                           ActionChip(
-                            label: Text('$g${food.unit}'),
+                            label:
+                                Text('$g${food.unit}'),
                             onPressed: () {
                               amountCtrl.text =
                                   g.toString();
@@ -366,25 +333,31 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                     ],
                   ),
                   const SizedBox(height: AppTheme.spaceMD),
+
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(
                         AppTheme.spaceMD),
                     decoration: BoxDecoration(
-                      color: theme
-                          .colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(
-                          AppTheme.radiusMD),
+                      color: theme.colorScheme
+                          .primaryContainer,
+                      borderRadius:
+                          BorderRadius.circular(
+                              AppTheme.radiusMD),
                     ),
                     child: Column(
                       children: [
                         Text(
                           '${kcal.round()} kcal',
-                          style: theme.textTheme.headlineSmall
+                          style: theme
+                              .textTheme.headlineSmall
                               ?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight:
+                                FontWeight.w800,
+                            color: AppTheme.lime,
                             fontFeatures: const [
-                              FontFeature.tabularFigures()
+                              FontFeature
+                                  .tabularFigures()
                             ],
                           ),
                         ),
@@ -393,9 +366,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                           'Protein ${_trim(p)}g · '
                           'Carbs ${_trim(c)}g · '
                           'Fat ${_trim(f)}g',
-                          style:
-                              theme.textTheme.bodySmall
-                                  ?.copyWith(
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(
                             color: theme.colorScheme
                                 .onSurfaceVariant,
                           ),
@@ -442,7 +414,7 @@ class _BodyScreenState extends State<BodyWeightScreen> {
         fatG: food.fat * factor,
         servingLabel: result.label,
       );
-      if (mounted) HapticFeedback.mediumImpact();
+      if (mounted) HitHaptics.mediumImpact();
     }
     amountCtrl.dispose();
   }
@@ -504,20 +476,23 @@ class _BodyScreenState extends State<BodyWeightScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () =>
+                Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () {
-              final kcal = double.tryParse(kcalCtrl.text);
+              final kcal =
+                  double.tryParse(kcalCtrl.text);
               if (kcal == null || kcal <= 0) return;
               Navigator.pop(dialogContext, (
                 name: nameCtrl.text.trim().isEmpty
                     ? 'Quick add'
                     : nameCtrl.text.trim(),
                 kcal: kcal,
-                protein:
-                    double.tryParse(proteinCtrl.text) ?? 0,
+                protein: double.tryParse(
+                        proteinCtrl.text) ??
+                    0,
               ));
             },
             child: const Text('Add'),
@@ -534,7 +509,7 @@ class _BodyScreenState extends State<BodyWeightScreen> {
         proteinG: result.protein,
         servingLabel: '',
       );
-      if (mounted) HapticFeedback.mediumImpact();
+      if (mounted) HitHaptics.mediumImpact();
     }
     nameCtrl.dispose();
     kcalCtrl.dispose();
@@ -561,13 +536,13 @@ class _BodyScreenState extends State<BodyWeightScreen> {
             _goalField(kcalCtrl, 'Calories (kcal)',
                 Icons.local_fire_department),
             const SizedBox(height: AppTheme.spaceMD),
-            _goalField(
-                pCtrl, 'Protein (g)', Icons.fitness_center),
+            _goalField(pCtrl, 'Protein (g)',
+                Icons.fitness_center),
             const SizedBox(height: AppTheme.spaceMD),
             _goalField(cCtrl, 'Carbs (g)', Icons.grain),
             const SizedBox(height: AppTheme.spaceMD),
-            _goalField(
-                fCtrl, 'Fat (g)', Icons.water_drop_outlined),
+            _goalField(fCtrl, 'Fat (g)',
+                Icons.water_drop_outlined),
           ],
         ),
         actions: [
@@ -610,8 +585,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
     fCtrl.dispose();
   }
 
-  Widget _goalField(
-      TextEditingController ctrl, String label, IconData icon) {
+  Widget _goalField(TextEditingController ctrl,
+      String label, IconData icon) {
     return TextField(
       controller: ctrl,
       keyboardType: TextInputType.number,
@@ -630,161 +605,38 @@ class _BodyScreenState extends State<BodyWeightScreen> {
       ? v.round().toString()
       : v.toStringAsFixed(1);
 
-  // ═════════════════════════════════════════════════
-  // BUILD
-  // ═════════════════════════════════════════════════
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Body')),
-      body: Column(
-        children: [
-          _buildSegmentedSwitch(theme),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: KeyedSubtree(
-                key: ValueKey(_selectedView),
-                child: _selectedView == 0
-                    ? _buildWeightView()
-                    : _selectedView == 1
-                        ? _buildDietView()
-                        : _buildWaterView(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSegmentedSwitch(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppTheme.spaceLG,
-          AppTheme.spaceSM,
-          AppTheme.spaceLG,
-          AppTheme.spaceSM),
-      child: Container(
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color:
-              theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          children: [
-            _segment(0, 'Weight'),
-            _segment(1, 'Diet'),
-            _segment(2, 'Water'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _segment(int index, String label) {
-    final selected = _selectedView == index;
-    final theme = Theme.of(context);
-
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(21),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          setState(() => _selectedView = index);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          height: 38,
-          decoration: BoxDecoration(
-            color: selected ? AppTheme.accent : null,
-            borderRadius: BorderRadius.circular(21),
-          ),
-          child: Center(
-            child: Text(
-              label.toUpperCase(),
-              style:
-                  theme.textTheme.labelMedium?.copyWith(
-                color: selected
-                    ? Colors.white
-                    : theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionLabel(String text) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: EdgeInsets.only(
-        top: AppTheme.spaceXL,
-        bottom: AppTheme.spaceMD,
-      ),
-      child: Row(
-        children: [
-          Text(
-            text,
-            style:
-                theme.textTheme.labelSmall?.copyWith(
-              letterSpacing: 2.5,
-              fontWeight: FontWeight.w700,
-              color:
-                  theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: AppTheme.spaceMD),
-          Expanded(
-            child: Container(
-              height: 1,
-              color: AppTheme.hairline(theme.brightness),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _vd(ThemeData theme) => Container(
-        width: 1,
-        margin: const EdgeInsets.symmetric(vertical: 14),
-        color: AppTheme.hairline(theme.brightness),
-      );
-
-  Widget _cell(ThemeData theme, String value, String label) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+      body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
-            Text(
-              value,
-              style:
-                  theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                fontFeatures: const [
-                  FontFeature.tabularFigures()
-                ],
+            ScreenTitle(
+              'Body',
+              subtitle: DateFormat('EEEE, MMM d')
+                  .format(DateTime.now())
+                  .toUpperCase(),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spaceLG),
+              child: SegmentSwitch(
+                options: const ['Weight', 'Diet'],
+                index: _selectedView,
+                onChanged: (i) =>
+                    setState(() => _selectedView = i),
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style:
-                  theme.textTheme.labelSmall?.copyWith(
-                fontSize: 9,
-                letterSpacing: 1.5,
-                color: theme.colorScheme
-                    .onSurfaceVariant,
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: KeyedSubtree(
+                  key: ValueKey(_selectedView),
+                  child: _selectedView == 0
+                      ? _buildWeightView()
+                      : _buildDietView(),
+                ),
               ),
             ),
           ],
@@ -792,10 +644,6 @@ class _BodyScreenState extends State<BodyWeightScreen> {
       ),
     );
   }
-
-  // ═════════════════════════════════════════════════
-  // WEIGHT VIEW
-  // ═════════════════════════════════════════════════
 
   Widget _buildWeightView() {
     return StreamBuilder<List<BodyWeightRow>>(
@@ -805,25 +653,28 @@ class _BodyScreenState extends State<BodyWeightScreen> {
         final entries = newest.reversed.toList();
 
         return ListView(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spaceLG),
+          padding: const EdgeInsets.fromLTRB(
+              AppTheme.spaceLG,
+              AppTheme.spaceLG,
+              AppTheme.spaceLG,
+              96),
           children: [
             _buildQuickAddBar(Theme.of(context)),
             const SizedBox(height: AppTheme.spaceLG),
             if (entries.isEmpty)
               _buildWeightEmptyState(Theme.of(context))
             else ...[
-              _buildWeightHero(Theme.of(context), entries),
-              _sectionLabel('TREND'),
+              _buildWeightHero(
+                  Theme.of(context), entries),
+              const SectionHeader('TREND'),
               entries.length >= 2
                   ? _buildChartCard(
                       Theme.of(context), entries)
                   : _buildChartHint(Theme.of(context)),
-              _sectionLabel('HISTORY'),
+              const SectionHeader('HISTORY'),
               ..._buildHistoryList(
                   Theme.of(context), entries),
             ],
-            const SizedBox(height: 60),
           ],
         );
       },
@@ -849,6 +700,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
               hintText: 'Today\'s weight…',
               errorText: _inputError,
               errorStyle: const TextStyle(fontSize: 11),
+              prefixIcon: const Icon(
+                  Icons.monitor_weight_outlined),
               suffixText: 'kg',
             ),
           ),
@@ -873,9 +726,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
   Widget _buildWeightHero(
       ThemeData theme, List<BodyWeightRow> entries) {
     final latest = entries.last;
-    final previous = entries.length >= 2
-        ? entries[entries.length - 2]
-        : null;
+    final previous =
+        entries.length >= 2 ? entries[entries.length - 2] : null;
     final delta = previous != null
         ? latest.weightKg - previous.weightKg
         : null;
@@ -919,8 +771,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                 'kg',
                 style:
                     theme.textTheme.titleMedium?.copyWith(
-                  color:
-                      theme.colorScheme.onSurfaceVariant,
+                  color: AppTheme.lime,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -932,12 +784,14 @@ class _BodyScreenState extends State<BodyWeightScreen> {
           child: IntrinsicHeight(
             child: Row(
               children: [
-                _deltaCell(theme, 'SINCE LAST', delta),
+                _deltaCell(
+                    theme, 'SINCE LAST', delta),
                 _vd(theme),
                 _deltaCell(
                     theme, 'SINCE START', totalDelta),
                 _vd(theme),
-                _cell(theme, '${entries.length}', 'ENTRIES'),
+                _cell(theme,
+                    '${entries.length}', 'ENTRIES'),
               ],
             ),
           ),
@@ -946,36 +800,81 @@ class _BodyScreenState extends State<BodyWeightScreen> {
     );
   }
 
+  Widget _vd(ThemeData theme) => Container(
+        width: 1,
+        margin: const EdgeInsets.symmetric(vertical: 14),
+        color: AppTheme.hairlineDark,
+      );
+
+  Widget _cell(ThemeData theme, String value,
+      String label) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Column(
+          children: [
+            Text(
+              value,
+              style:
+                  theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                fontFeatures: const [
+                  FontFeature.tabularFigures()
+                ],
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style:
+                  theme.textTheme.labelSmall?.copyWith(
+                fontSize: 9,
+                letterSpacing: 1.5,
+                color: theme.colorScheme
+                    .onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _deltaCell(
       ThemeData theme, String label, double? delta) {
     final isUp = (delta ?? 0) >= 0;
+    final color = delta == null
+        ? theme.colorScheme.onSurfaceVariant
+        : (isUp ? AppTheme.coral : AppTheme.mint);
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment:
+                  MainAxisAlignment.center,
               children: [
                 Icon(
                   delta == null
                       ? Icons.remove
                       : (isUp
-                          ? Icons.arrow_upward_rounded
-                          : Icons.arrow_downward_rounded),
+                          ? Icons
+                              .arrow_upward_rounded
+                          : Icons
+                              .arrow_downward_rounded),
                   size: 13,
-                  color: delta == null
-                      ? theme.colorScheme.onSurfaceVariant
-                      : AppTheme.accent,
+                  color: color,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   delta == null
                       ? '—'
                       : '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)}',
-                  style:
-                      theme.textTheme.titleLarge?.copyWith(
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(
                     fontWeight: FontWeight.w800,
+                    color: color,
                     fontFeatures: const [
                       FontFeature.tabularFigures()
                     ],
@@ -1033,7 +932,7 @@ class _BodyScreenState extends State<BodyWeightScreen> {
               horizontalInterval: 1,
               getDrawingHorizontalLine: (v) => FlLine(
                 color: scheme.outlineVariant
-                    .withOpacity(0.6),
+                    .withValues(alpha: 0.6),
                 strokeWidth: 1,
               ),
             ),
@@ -1052,7 +951,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                     value.toStringAsFixed(0),
                     style: theme.textTheme.labelSmall
                         ?.copyWith(
-                      color: scheme.onSurfaceVariant,
+                      color:
+                          scheme.onSurfaceVariant,
                       fontSize: 9,
                     ),
                   ),
@@ -1064,17 +964,20 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                   interval:
                       _labelInterval(entries.length),
                   getTitlesWidget: (value, meta) {
-                    final date = firstDate
-                        .add(Duration(days: value.toInt()));
+                    final date = firstDate.add(
+                        Duration(
+                            days: value.toInt()));
                     return Padding(
                       padding:
                           const EdgeInsets.only(top: 6),
                       child: Text(
-                        DateFormat('d MMM').format(date),
-                        style:
-                            theme.textTheme.labelSmall
-                                ?.copyWith(
-                          color: scheme.onSurfaceVariant,
+                        DateFormat('d MMM')
+                            .format(date),
+                        style: theme
+                            .textTheme.labelSmall
+                            ?.copyWith(
+                          color: scheme
+                              .onSurfaceVariant,
                           fontSize: 9,
                         ),
                       ),
@@ -1089,18 +992,37 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                 spots: spots,
                 isCurved: true,
                 preventCurveOverShooting: true,
-                color: AppTheme.accent,
-                barWidth: 2.5,
-                dotData: const FlDotData(show: true),
+                gradient: LinearGradient(
+                  colors: AppTheme.heroGradient.colors,
+                ),
+                barWidth: 3,
+                dotData: FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent,
+                          barData, index) =>
+                      FlDotCirclePainter(
+                    radius: 4.5,
+                    color: AppTheme.lime,
+                    strokeWidth: 2,
+                    strokeColor: AppTheme.canvas,
+                  ),
+                ),
                 belowBarData: BarAreaData(
                   show: true,
-                  color:
-                      AppTheme.accent.withOpacity(0.06),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppTheme.lime.withValues(alpha: 0.22),
+                      AppTheme.lime.withValues(alpha: 0.0),
+                    ],
+                  ),
                 ),
               ),
             ],
             lineTouchData: LineTouchData(
-              touchTooltipData: LineTouchTooltipData(
+              touchTooltipData:
+                  LineTouchTooltipData(
                 getTooltipItems: (spots) => spots
                     .map((s) => LineTooltipItem(
                           '${s.y.toStringAsFixed(1)} kg',
@@ -1129,14 +1051,15 @@ class _BodyScreenState extends State<BodyWeightScreen> {
       child: Row(
         children: [
           Icon(Icons.show_chart,
-              color: AppTheme.accent, size: 28),
+              color: AppTheme.lime, size: 28),
           const SizedBox(width: AppTheme.spaceMD),
           Expanded(
             child: Text(
               'One more entry and your trend line appears here.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color:
-                    theme.colorScheme.onSurfaceVariant,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(
+                color: theme.colorScheme
+                    .onSurfaceVariant,
               ),
             ),
           ),
@@ -1153,7 +1076,9 @@ class _BodyScreenState extends State<BodyWeightScreen> {
         _buildWeightEntryRow(
           theme,
           display[i],
-          i + 1 < display.length ? display[i + 1] : null,
+          i + 1 < display.length
+              ? display[i + 1]
+              : null,
         ),
     ];
   }
@@ -1167,26 +1092,27 @@ class _BodyScreenState extends State<BodyWeightScreen> {
     final delta =
         prev != null ? entry.weightKg - prev.weightKg : null;
     final isUp = (delta ?? 0) >= 0;
+    final pillColor = isUp ? AppTheme.coral : AppTheme.mint;
 
     return Padding(
-      padding:
-          const EdgeInsets.only(bottom: AppTheme.spaceSM),
+      padding: const EdgeInsets.only(
+          bottom: AppTheme.spaceSM),
       child: Dismissible(
         key: ValueKey('weight-${entry.id}'),
         direction: DismissDirection.endToStart,
         onDismissed: (direction) {
-          HapticFeedback.lightImpact();
+          HitHaptics.lightImpact();
           DatabaseProvider.instance
               .deleteBodyWeight(entry.id);
         },
         background: Container(
           alignment: Alignment.centerRight,
-          padding:
-              const EdgeInsets.only(right: AppTheme.spaceLG),
+          padding: const EdgeInsets.only(
+              right: AppTheme.spaceLG),
           decoration: BoxDecoration(
             color: scheme.errorContainer,
-            borderRadius:
-                BorderRadius.circular(AppTheme.radiusLG),
+            borderRadius: BorderRadius.circular(
+                AppTheme.radiusXL),
           ),
           child: Icon(Icons.delete_outline,
               color: scheme.onErrorContainer),
@@ -1207,9 +1133,9 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                       DateFormat('EEE, MMM d')
                           .format(entry.date)
                           .toUpperCase(),
-                      style:
-                          theme.textTheme.labelLarge
-                              ?.copyWith(
+                      style: theme
+                          .textTheme.labelLarge
+                          ?.copyWith(
                         letterSpacing: 1,
                       ),
                     ),
@@ -1218,7 +1144,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                           .format(entry.date),
                       style: theme.textTheme.bodySmall
                           ?.copyWith(
-                        color: scheme.onSurfaceVariant,
+                        color: scheme
+                            .onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -1228,31 +1155,40 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                 Container(
                   margin: const EdgeInsets.only(
                       right: AppTheme.spaceMD),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3),
                   decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
+                    color:
+                        pillColor.withValues(alpha: 0.14),
                     borderRadius:
                         BorderRadius.circular(20),
+                    border: Border.all(
+                        color: pillColor
+                            .withValues(alpha: 0.35)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         isUp
-                            ? Icons.arrow_upward_rounded
-                            : Icons.arrow_downward_rounded,
+                            ? Icons
+                                .arrow_upward_rounded
+                            : Icons
+                                .arrow_downward_rounded,
                         size: 12,
-                        color: AppTheme.accent,
+                        color: pillColor,
                       ),
                       const SizedBox(width: 3),
                       Text(
                         '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)}',
-                        style:
-                            theme.textTheme.labelSmall
-                                ?.copyWith(
-                          color: AppTheme.accent,
-                          fontWeight: FontWeight.w700,
+                        style: theme
+                            .textTheme.labelSmall
+                            ?.copyWith(
+                          color: pillColor,
+                          fontWeight:
+                              FontWeight.w800,
                         ),
                       ),
                     ],
@@ -1261,7 +1197,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
               Text(
                 '${_fmt.format(entry.weightKg)} kg',
                 style:
-                    theme.textTheme.titleMedium?.copyWith(
+                    theme.textTheme.titleMedium
+                        ?.copyWith(
                   fontWeight: FontWeight.w800,
                   fontFeatures: const [
                     FontFeature.tabularFigures()
@@ -1286,7 +1223,7 @@ class _BodyScreenState extends State<BodyWeightScreen> {
               TextSpan(
                 text: '.',
                 style:
-                    TextStyle(color: AppTheme.accent),
+                    TextStyle(color: AppTheme.lime),
               ),
             ],
           ),
@@ -1302,17 +1239,14 @@ class _BodyScreenState extends State<BodyWeightScreen> {
           'The trend line starts with your second entry.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+            color:
+                theme.colorScheme.onSurfaceVariant,
             height: 1.5,
           ),
         ),
       ],
     );
   }
-
-  // ═════════════════════════════════════════════════
-  // DIET VIEW
-  // ═════════════════════════════════════════════════
 
   Widget _buildDietView() {
     final theme = Theme.of(context);
@@ -1332,22 +1266,25 @@ class _BodyScreenState extends State<BodyWeightScreen> {
             entries.fold(0.0, (a, e) => a + e.fatG);
 
         return ListView(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spaceLG),
+          padding: const EdgeInsets.fromLTRB(
+              AppTheme.spaceLG,
+              AppTheme.spaceLG,
+              AppTheme.spaceLG,
+              96),
           children: [
             _buildCalorieCard(
                 theme, consumed, entries.length),
             const SizedBox(height: AppTheme.spaceMD),
-            _buildMacroCard(theme, protein, carbs, fat),
+            _buildMacroCard(
+                theme, protein, carbs, fat),
             const SizedBox(height: AppTheme.spaceMD),
             _buildQuickActions(theme),
             if (entries.isEmpty)
               _buildDietEmptyState(theme)
             else ...[
-              _sectionLabel('TODAY\'S LOG'),
+              const SectionHeader('TODAY\'S LOG'),
               ..._buildFoodEntryList(theme, entries),
             ],
-            const SizedBox(height: 60),
           ],
         );
       },
@@ -1358,10 +1295,12 @@ class _BodyScreenState extends State<BodyWeightScreen> {
       ThemeData theme, double consumed, int entryCount) {
     final progress =
         (consumed / _goals.calories).clamp(0.0, 1.0);
-    final remaining = _goals.calories - consumed.round();
+    final remaining =
+        _goals.calories - consumed.round();
     final over = remaining < 0;
 
     return GlassCard(
+      glow: true,
       padding: const EdgeInsets.all(AppTheme.spaceLG),
       child: Column(
         children: [
@@ -1384,53 +1323,43 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                         .colorScheme.onSurfaceVariant),
                 onPressed: _showGoalsDialog,
                 tooltip: 'Edit goals',
-                visualDensity: VisualDensity.compact,
+                visualDensity:
+                    VisualDensity.compact,
               ),
             ],
           ),
           const SizedBox(height: AppTheme.spaceSM),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 160,
-                height: 160,
-                child: CircularProgressIndicator(
-                  value: progress,
-                  strokeWidth: 9,
-                  backgroundColor: theme.colorScheme
-                      .surfaceContainerHighest,
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(
-                          AppTheme.accent),
+          GlowRing(
+            progress: progress,
+            size: 170,
+            strokeWidth: 12,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _fmtInt.format(
+                      over ? -remaining : remaining),
+                  style: theme.textTheme.displaySmall
+                      ?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -1.5,
+                    fontFeatures: const [
+                      FontFeature.tabularFigures()
+                    ],
+                  ),
                 ),
-              ),
-              Column(
-                children: [
-                  Text(
-                    _fmtInt.format(
-                        over ? -remaining : remaining),
-                    style:
-                        theme.textTheme.displaySmall
-                            ?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -1.5,
-                      fontFeatures: const [
-                        FontFeature.tabularFigures()
-                      ],
-                    ),
+                Text(
+                  over
+                      ? 'kcal over'
+                      : 'kcal left',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(
+                    color: theme.colorScheme
+                        .onSurfaceVariant,
                   ),
-                  Text(
-                    over ? 'kcal over' : 'kcal left',
-                    style:
-                        theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme
-                          .onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: AppTheme.spaceMD),
           Text(
@@ -1438,8 +1367,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
             '${_fmtInt.format(_goals.calories)} kcal · '
             '$entryCount ${entryCount == 1 ? 'entry' : 'entries'}',
             style: theme.textTheme.bodySmall?.copyWith(
-              color:
-                  theme.colorScheme.onSurfaceVariant,
+              color: theme.colorScheme
+                  .onSurfaceVariant,
             ),
           ),
         ],
@@ -1462,8 +1391,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
           const SizedBox(height: 16),
           Divider(
               height: 1,
-              color:
-                  AppTheme.hairline(theme.brightness)),
+              color: AppTheme.hairline(
+                  theme.brightness)),
           const SizedBox(height: 16),
           _macroRow(
             theme,
@@ -1475,8 +1404,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
           const SizedBox(height: 16),
           Divider(
               height: 1,
-              color:
-                  AppTheme.hairline(theme.brightness)),
+              color: AppTheme.hairline(
+                  theme.brightness)),
           const SizedBox(height: 16),
           _macroRow(
             theme,
@@ -1510,7 +1439,8 @@ class _BodyScreenState extends State<BodyWeightScreen> {
               height: 14,
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius:
+                    BorderRadius.circular(2),
               ),
             ),
             const SizedBox(width: 10),
@@ -1518,14 +1448,16 @@ class _BodyScreenState extends State<BodyWeightScreen> {
               child: Text(
                 label,
                 style:
-                    theme.textTheme.titleSmall?.copyWith(
+                    theme.textTheme.titleSmall
+                        ?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
             Text(
               '${_trim(value)} / $goal g',
-              style: theme.textTheme.bodySmall?.copyWith(
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(
                 fontWeight: FontWeight.w700,
                 fontFeatures: const [
                   FontFeature.tabularFigures()
@@ -1535,15 +1467,11 @@ class _BodyScreenState extends State<BodyWeightScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(2.5),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 4,
-            backgroundColor: theme
-                .colorScheme.surfaceContainerHighest,
-            valueColor:
-                AlwaysStoppedAnimation<Color>(color),
+        GradientBar(
+          progress: progress,
+          height: 6,
+          gradient: LinearGradient(
+            colors: [color.withValues(alpha: 0.5), color],
           ),
         ),
       ],
@@ -1556,8 +1484,7 @@ class _BodyScreenState extends State<BodyWeightScreen> {
         Expanded(
           child: FilledButton.icon(
             onPressed: _showFoodPicker,
-            icon: const Icon(
-                Icons.restaurant_menu_rounded,
+            icon: const Icon(Icons.restaurant_menu_rounded,
                 size: 20),
             label: const Text('ADD FOOD'),
             style: FilledButton.styleFrom(
@@ -1591,7 +1518,7 @@ class _BodyScreenState extends State<BodyWeightScreen> {
             key: ValueKey('food-${e.id}'),
             direction: DismissDirection.endToStart,
             onDismissed: (direction) {
-              HapticFeedback.lightImpact();
+              HitHaptics.lightImpact();
               DatabaseProvider.instance
                   .deleteFoodEntry(e.id);
             },
@@ -1603,14 +1530,15 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                 color:
                     theme.colorScheme.errorContainer,
                 borderRadius: BorderRadius.circular(
-                    AppTheme.radiusLG),
+                    AppTheme.radiusXL),
               ),
               child: Icon(Icons.delete_outline,
                   color: theme.colorScheme
                       .onErrorContainer),
             ),
             child: GlassCard(
-              padding: const EdgeInsets.symmetric(
+              padding:
+                  const EdgeInsets.symmetric(
                 horizontal: AppTheme.spaceMD,
                 vertical: AppTheme.spaceMD,
               ),
@@ -1627,16 +1555,16 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                               .textTheme.titleSmall
                               ?.copyWith(
                             fontWeight:
-                                FontWeight.w600,
+                                FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           '${e.servingLabel.isEmpty ? '' : '${e.servingLabel} · '}${DateFormat('HH:mm').format(e.date)}\n'
                           'Protein ${_trim(e.proteinG)}g · Carbs ${_trim(e.carbsG)}g · Fat ${_trim(e.fatG)}g',
-                          style:
-                              theme.textTheme.bodySmall
-                                  ?.copyWith(
+                          style: theme
+                              .textTheme.bodySmall
+                              ?.copyWith(
                             color: theme.colorScheme
                                 .onSurfaceVariant,
                             height: 1.4,
@@ -1653,11 +1581,12 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                     children: [
                       Text(
                         '${e.calories.round()}',
-                        style: theme
-                            .textTheme.headlineSmall
+                        style: theme.textTheme
+                            .headlineSmall
                             ?.copyWith(
                           fontWeight:
                               FontWeight.w800,
+                          color: AppTheme.lime,
                           fontFeatures: const [
                             FontFeature
                                 .tabularFigures()
@@ -1666,10 +1595,11 @@ class _BodyScreenState extends State<BodyWeightScreen> {
                       ),
                       Text(
                         'kcal',
-                        style:
-                            theme.textTheme.labelSmall
-                                ?.copyWith(
-                          color: theme.colorScheme
+                        style: theme.textTheme
+                            .labelSmall
+                            ?.copyWith(
+                          color: theme
+                              .colorScheme
                               .onSurfaceVariant,
                         ),
                       ),
@@ -1692,11 +1622,12 @@ class _BodyScreenState extends State<BodyWeightScreen> {
           Text.rich(
             TextSpan(
               children: [
-                const TextSpan(text: 'Nothing logged'),
+                const TextSpan(
+                    text: 'Nothing logged'),
                 TextSpan(
                   text: '.',
-                  style:
-                      TextStyle(color: AppTheme.accent),
+                  style: TextStyle(
+                      color: AppTheme.lime),
                 ),
               ],
             ),
@@ -1711,460 +1642,14 @@ class _BodyScreenState extends State<BodyWeightScreen> {
             'Search the food catalog or quick-add calories.\n'
             'Every entry updates your ring instantly.',
             textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color:
-                  theme.colorScheme.onSurfaceVariant,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(
+              color: theme.colorScheme
+                  .onSurfaceVariant,
               height: 1.5,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // ═════════════════════════════════════════════════
-  // WATER VIEW
-  // ═════════════════════════════════════════════════
-
-  Widget _buildWaterView() {
-    final theme = Theme.of(context);
-
-    return StreamBuilder<List<WaterEntryRow>>(
-      stream: _waterStream,
-      builder: (context, snapshot) {
-        final entries = snapshot.data ?? [];
-        final totalMl =
-            entries.fold(0, (a, e) => a + e.amountMl);
-
-        return ListView(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spaceLG),
-          children: [
-            _buildWaterHero(theme, totalMl),
-            const SizedBox(height: AppTheme.spaceMD),
-            _buildWaterQuickAdd(theme),
-            if (entries.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(
-                    top: AppTheme.spaceSM),
-                child: Text(
-                  'Tap a size above to log your first glass.',
-                  style:
-                      theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme
-                        .onSurfaceVariant,
-                  ),
-                ),
-              )
-            else ...[
-              _sectionLabel('TODAY\'S INTAKE'),
-              ..._buildWaterEntryList(theme, entries),
-            ],
-            const SizedBox(height: 140),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildWaterHero(ThemeData theme, int totalMl) {
-    final progress = _waterGoalMl > 0
-        ? (totalMl / _waterGoalMl).clamp(0.0, 1.0)
-        : 0.0;
-    final remaining = _waterGoalMl - totalMl;
-    final glasses = (totalMl / 250).round();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'TODAY\'S WATER',
-          style: theme.textTheme.labelSmall?.copyWith(
-            letterSpacing: 2.5,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: AppTheme.spaceSM),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-                        TweenAnimationBuilder<double>(
-              tween: Tween<double>(end: totalMl.toDouble()),
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, _) => Text(
-                _fmtInt.format(value.round()),
-                style:
-                    theme.textTheme.displayMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -1.8,
-                  fontFeatures: const [
-                    FontFeature.tabularFigures()
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                '/ ${_fmtInt.format(_waterGoalMl)} ml',
-                style:
-                    theme.textTheme.titleMedium?.copyWith(
-                  color:
-                      theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppTheme.spaceMD),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 6,
-            backgroundColor: theme
-                .colorScheme.surfaceContainerHighest,
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(
-                    AppTheme.accent),
-          ),
-        ),
-        const SizedBox(height: AppTheme.spaceSM),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                remaining > 0
-                    ? '${_fmtInt.format(remaining)} ml to go · ≈ $glasses glasses'
-                    : 'Goal met · ≈ $glasses glasses',
-                style:
-                    theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme
-                      .onSurfaceVariant,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: _showWaterGoalDialog,
-              style: TextButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10),
-              ),
-              child: Text(
-                'CHANGE GOAL',
-                style:
-                    theme.textTheme.labelSmall?.copyWith(
-                  color: AppTheme.accent,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWaterQuickAdd(ThemeData theme) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            _waterAmountButton(
-                theme, 250, 'GLASS', Icons.local_drink_outlined),
-            const SizedBox(width: AppTheme.spaceSM),
-            _waterAmountButton(
-                theme, 500, 'BOTTLE', Icons.water_drop_outlined),
-            const SizedBox(width: AppTheme.spaceSM),
-            _waterAmountButton(
-                theme, 750, 'LARGE', Icons.water_drop),
-          ],
-        ),
-        const SizedBox(height: AppTheme.spaceSM),
-        OutlinedButton.icon(
-          onPressed: _showCustomWaterDialog,
-          icon: const Icon(Icons.edit_outlined, size: 18),
-          label: const Text('CUSTOM AMOUNT'),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _waterAmountButton(
-      ThemeData theme, int ml, String label, IconData icon) {
-    return Expanded(
-      child: InkWell(
-        borderRadius:
-            BorderRadius.circular(AppTheme.radiusMD),
-        onTap: () => _addWater(ml),
-        child: Container(
-          padding:
-              const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color:
-                theme.colorScheme.surfaceContainerHighest,
-            borderRadius:
-                BorderRadius.circular(AppTheme.radiusMD),
-            border: Border.all(
-                color: AppTheme.hairline(
-                    theme.brightness)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, size: 20, color: AppTheme.accent),
-              const SizedBox(height: 6),
-              Text(
-                '+$ml',
-                style:
-                    theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontFeatures: const [
-                    FontFeature.tabularFigures()
-                  ],
-                ),
-              ),
-              Text(
-                label,
-                style:
-                    theme.textTheme.labelSmall?.copyWith(
-                  fontSize: 9,
-                  letterSpacing: 1.5,
-                  color: theme
-                      .colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildWaterEntryList(
-      ThemeData theme, List<WaterEntryRow> entries) {
-    return [
-      for (final e in entries)
-        Padding(
-          padding:
-              const EdgeInsets.only(bottom: AppTheme.spaceSM),
-          child: Dismissible(
-            key: ValueKey('water-${e.id}'),
-            direction: DismissDirection.endToStart,
-            onDismissed: (direction) {
-              HapticFeedback.lightImpact();
-              DatabaseProvider.instance
-                  .deleteWaterEntry(e.id);
-            },
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(
-                  right: AppTheme.spaceLG),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(
-                    AppTheme.radiusLG),
-              ),
-              child: Icon(Icons.delete_outline,
-                  color: theme.colorScheme
-                      .onErrorContainer),
-            ),
-            child: GlassCard(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppTheme.spaceMD,
-                vertical: AppTheme.spaceMD,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme
-                          .surfaceContainerHighest,
-                      borderRadius:
-                          BorderRadius.circular(
-                              AppTheme.radiusSM),
-                    ),
-                    child: Icon(Icons.water_drop,
-                        size: 17, color: AppTheme.accent),
-                  ),
-                  const SizedBox(
-                      width: AppTheme.spaceMD),
-                  Text(
-                    DateFormat('HH:mm').format(e.date),
-                    style:
-                        theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '+${_fmtInt.format(e.amountMl)} ml',
-                    style:
-                        theme.textTheme.titleMedium
-                            ?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      fontFeatures: const [
-                        FontFeature.tabularFigures()
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-    ];
-  }
-
-  Future<void> _addWater(int ml) async {
-    HapticFeedback.lightImpact();
-    await DatabaseProvider.instance.insertWaterEntry(
-      date: DateTime.now(),
-      amountMl: ml,
-    );
-  }
-
-  Future<void> _showCustomWaterDialog() async {
-    final ctrl = TextEditingController();
-
-    final result = await showDialog<int>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Custom amount'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly
-          ],
-          decoration: const InputDecoration(
-            labelText: 'Amount (ml)',
-            hintText: 'e.g., 300',
-            prefixIcon: Icon(Icons.water_drop),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final ml = int.tryParse(ctrl.text);
-              if (ml == null || ml <= 0 || ml > 3000) {
-                return;
-              }
-              Navigator.pop(dialogContext, ml);
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null) {
-      await _addWater(result);
-    }
-    ctrl.dispose();
-  }
-
-  Future<void> _showWaterGoalDialog() async {
-    var tempGoal = _waterGoalMl;
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) =>
-            AlertDialog(
-          title: const Text('Daily water goal'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${_fmtInt.format(tempGoal)} ml',
-                style: Theme.of(dialogContext)
-                    .textTheme
-                    .displaySmall,
-              ),
-              Text(
-                '≈ ${(tempGoal / 250).round()} glasses',
-                style: Theme.of(dialogContext)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(
-                      color: Theme.of(dialogContext)
-                          .colorScheme
-                          .onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: AppTheme.spaceMD),
-              Slider(
-                value:
-                    tempGoal.clamp(1000, 5000).toDouble(),
-                min: 1000,
-                max: 5000,
-                divisions: 16,
-                label: '${_fmtInt.format(tempGoal)} ml',
-                onChanged: (v) => setDialogState(
-                    () => tempGoal = v.round()),
-              ),
-              const SizedBox(height: AppTheme.spaceSM),
-              Wrap(
-                spacing: AppTheme.spaceXS,
-                runSpacing: AppTheme.spaceXS,
-                alignment: WrapAlignment.center,
-                children: [
-                  for (final preset
-                      in [2000, 2500, 3000, 4000])
-                    () {
-                      final selected =
-                          tempGoal == preset;
-                      return ActionChip(
-                        label: Text('${preset ~/ 1000}L'),
-                        onPressed: () => setDialogState(
-                            () => tempGoal = preset),
-                        backgroundColor: selected
-                            ? AppTheme.accent
-                            : null,
-                        labelStyle: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : null,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : null,
-                        ),
-                      );
-                    }(),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                DatabaseProvider.instance.setSetting(
-                    'water_goal_ml', tempGoal.toString());
-              },
-              child: const Text('Save goal'),
-            ),
-          ],
-        ),
       ),
     );
   }

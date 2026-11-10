@@ -5,30 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hitfinity — Train with intent</title>
 <meta name="description" content="Hitfinity is an open-source fitness tracker for Android and Linux. Workouts, weekly planning, GPS walks, nutrition, and hydration — one app, zero accounts.">
+<meta name="theme-color" content="#0A0E08">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
 /* ═══════════════════════════════════════════════════
-   HITFINITY DESIGN SYSTEM
-   One accent. Flat surfaces. Hairlines. Editorial type.
+   HITFINITY DESIGN SYSTEM · GEN-Z SKIN ("NEON GYM")
+   Signature lime on deep green-black · lime→mint energy
+   gradients · hairline glass cards · ambient aurora ·
+   Space Grotesk everywhere.
    ═══════════════════════════════════════════════════ */
 :root {
-  --accent: #FF5A1F;
-  --accent-soft: rgba(255, 90, 31, 0.12);
-  --bg: #0A0B0D;
-  --surface: #111316;
-  --surface-high: #181B1F;
-  --hairline: rgba(255, 255, 255, 0.07);
-  --hairline-strong: rgba(255, 255, 255, 0.12);
-  --text: #F4F4F5;
-  --text-muted: #9BA1A8;
-  --text-faint: #5F656D;
-  --radius: 20px;
-  --font-display: 'Sora', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --accent: #A6F511;
+  --accent-soft: rgba(166, 245, 17, 0.12);
+  --bg: #0A0E08;
+  --bg-deep: #060904;
+  --surface: #141A10;
+  --surface-high: #1B2317;
+  --track: #232C1E;
+  --hairline: rgba(255, 255, 255, 0.09);
+  --hairline-strong: rgba(255, 255, 255, 0.16);
+  --text: #EDF2E4;
+  --text-muted: #8A9484;
+  --text-faint: #5E6858;
+  --lime: #A6F511;
+  --lime-soft: #CDFF66;
+  --mint: #34E5B0;
+  --coral: #E14B2E;
+  --sky: #7DB2FF;
+  --sun: #FBBF68;
+  --ink: #0B0F0A;
+  --grad: linear-gradient(135deg, #8FE830 0%, #34E5B0 100%);
+  --radius: 24px;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Space Grotesk', sans-serif;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -45,7 +58,14 @@ body {
   overflow-x: hidden;
 }
 
-::selection { background: var(--accent); color: #fff; }
+::selection { background: var(--lime); color: var(--ink); }
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--track); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #34402C; }
+
+:focus-visible { outline: 2px solid rgba(166, 245, 17, 0.6); outline-offset: 2px; }
 
 h1, h2, h3, h4 {
   font-family: var(--font-display);
@@ -69,13 +89,60 @@ h1, h2, h3, h4 {
   color: var(--text-muted);
 }
 
-.accent { color: var(--accent); }
+.accent { color: var(--lime); }
 
 .rule {
   height: 1px;
   background: var(--hairline);
   flex: 1;
 }
+
+/* ─── Ambient aurora (mirrors aurora_background.dart) ── */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.aurora i {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  will-change: transform;
+}
+
+/* 1 · Signature lime — upper left, the "sunrise" of the skin */
+.aurora .a1 {
+  width: 95vmax; height: 95vmax;
+  left: -28vw; top: -35vh;
+  background: radial-gradient(circle, rgba(166, 245, 17, 0.10) 0%, rgba(166, 245, 17, 0) 65%);
+  animation: drift1 30s ease-in-out infinite alternate;
+}
+
+/* 2 · Mint — right flank, the cool counterweight */
+.aurora .a2 {
+  width: 72vmax; height: 72vmax;
+  right: -22vw; top: 8vh;
+  background: radial-gradient(circle, rgba(52, 229, 176, 0.07) 0%, rgba(52, 229, 176, 0) 65%);
+  animation: drift2 30s ease-in-out infinite alternate;
+}
+
+/* 3 · Sky whisper — low center, grounds the composition */
+.aurora .a3 {
+  width: 60vmax; height: 60vmax;
+  left: 18vw; bottom: -28vh;
+  background: radial-gradient(circle, rgba(125, 178, 255, 0.05) 0%, rgba(125, 178, 255, 0) 65%);
+  animation: drift3 30s ease-in-out infinite alternate;
+}
+
+@keyframes drift1 { to { transform: translate(7vw, 5vh); } }
+@keyframes drift2 { to { transform: translate(-6vw, 7vh); } }
+@keyframes drift3 { to { transform: translate(8vw, -5vh); } }
+
+/* content sits above the aurora layer */
+header.hero, .marquee-section, section, footer { position: relative; z-index: 1; }
 
 /* ─── Scroll reveal ──────────────────────────────── */
 .reveal {
@@ -96,7 +163,7 @@ nav {
   z-index: 100;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  background: rgba(10, 11, 13, 0.72);
+  background: rgba(10, 14, 8, 0.72);
   border-bottom: 1px solid var(--hairline);
 }
 
@@ -112,7 +179,7 @@ nav {
 
 .logo {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 19px;
   letter-spacing: -0.02em;
   text-decoration: none;
@@ -124,13 +191,14 @@ nav {
 
 .logo-mark {
   width: 26px; height: 26px;
-  background: var(--accent);
-  border-radius: 7px;
+  background: var(--grad);
+  border-radius: 8px;
   display: grid;
   place-items: center;
-  color: #fff;
+  color: var(--ink);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(166, 245, 17, 0.3);
 }
 
 .nav-links {
@@ -152,11 +220,14 @@ nav {
 .nav-links a:hover { color: var(--text); background: var(--surface-high); }
 
 .nav-cta {
-  background: var(--accent) !important;
-  color: #fff !important;
+  background: var(--lime) !important;
+  color: var(--ink) !important;
   padding: 8px 18px !important;
   border-radius: 11px !important;
+  box-shadow: 0 4px 16px rgba(166, 245, 17, 0.25);
 }
+
+.nav-cta:hover { background: var(--lime-soft) !important; }
 
 /* ═══ HERO ════════════════════════════════════════ */
 .hero {
@@ -169,7 +240,7 @@ nav {
   position: absolute;
   width: 700px; height: 700px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(166, 245, 17, 0.14) 0%, transparent 65%);
   top: -200px; right: -150px;
   pointer-events: none;
   animation: breathe 8s ease-in-out infinite;
@@ -190,7 +261,7 @@ nav {
 
 .hero h1 {
   font-size: clamp(52px, 7vw, 88px);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.045em;
   line-height: 0.98;
   margin: 20px 0 24px;
@@ -215,19 +286,21 @@ nav {
   padding: 15px 28px;
   border-radius: 14px;
   text-decoration: none;
-  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s, background 0.2s;
   cursor: pointer;
 }
 
+/* the signature energy pill — lime→mint gradient, ink on top */
 .btn-primary {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 8px 30px rgba(255, 90, 31, 0.35);
+  background: var(--grad);
+  color: var(--ink);
+  box-shadow: 0 8px 30px rgba(166, 245, 17, 0.30);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(255, 90, 31, 0.45);
+  filter: brightness(1.06);
+  box-shadow: 0 12px 40px rgba(166, 245, 17, 0.42);
 }
 
 .btn-ghost {
@@ -251,8 +324,9 @@ nav {
   display: block;
   font-family: var(--font-display);
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  color: var(--lime);
 }
 
 .hero-meta .stat span {
@@ -263,7 +337,7 @@ nav {
   font-weight: 600;
 }
 
-/* ═══ PHONE MOCKUP (pure CSS) ═════════════════════ */
+/* ═══ PHONE MOCKUP (pure CSS — the Gen-Z skin app) ═ */
 .phone-wrap {
   display: flex;
   justify-content: center;
@@ -278,7 +352,7 @@ nav {
   border-radius: 42px;
   padding: 10px;
   box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6),
-              0 0 0 6px rgba(255, 255, 255, 0.02);
+              0 0 80px rgba(166, 245, 17, 0.07);
   animation: float 7s ease-in-out infinite;
   position: relative;
   z-index: 2;
@@ -307,13 +381,40 @@ nav {
   display: flex;
   flex-direction: column;
   padding-top: 38px;
+  position: relative;
+}
+
+/* — screen: mini aurora (same three glows as the app) — */
+.app-aurora { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+.app-aurora i { position: absolute; display: block; border-radius: 50%; }
+.app-aurora i:nth-child(1) {
+  width: 75%; padding-top: 75%; left: -14%; top: -10%;
+  background: radial-gradient(circle, rgba(166, 245, 17, 0.13) 0%, rgba(166, 245, 17, 0) 66%);
+  animation: appdrift1 30s ease-in-out infinite alternate;
+}
+.app-aurora i:nth-child(2) {
+  width: 62%; padding-top: 62%; right: -16%; top: 28%;
+  background: radial-gradient(circle, rgba(52, 229, 176, 0.10) 0%, rgba(52, 229, 176, 0) 66%);
+  animation: appdrift2 30s ease-in-out infinite alternate;
+}
+.app-aurora i:nth-child(3) {
+  width: 55%; padding-top: 55%; left: 12%; bottom: -12%;
+  background: radial-gradient(circle, rgba(125, 178, 255, 0.07) 0%, rgba(125, 178, 255, 0) 66%);
+  animation: appdrift3 30s ease-in-out infinite alternate;
+}
+@keyframes appdrift1 { to { transform: translate(9%, 6%); } }
+@keyframes appdrift2 { to { transform: translate(-8%, 9%); } }
+@keyframes appdrift3 { to { transform: translate(11%, -7%); } }
+
+.statusbar, .app-header, .app-hero, .plan-chips, .app-body, .app-dock {
+  position: relative; z-index: 1;
 }
 
 /* — screen: status bar — */
 .statusbar {
   display: flex;
   justify-content: space-between;
-  padding: 0 22px 8px;
+  padding: 0 20px 4px;
   font-size: 11px;
   font-weight: 700;
   color: var(--text);
@@ -322,44 +423,48 @@ nav {
 
 /* — screen: app header — */
 .app-header {
-  padding: 8px 20px 12px;
+  padding: 4px 18px 8px;
   font-family: var(--font-display);
   font-size: 15px;
   font-weight: 700;
+  color: var(--text);
 }
 
-/* — screen: gradient timer hero — */
+/* — screen: gradient timer hero (the energy card) — */
 .app-hero {
-  background: linear-gradient(135deg, #FF5A1F 0%, #FF7038 100%);
-  padding: 18px 20px;
+  background: var(--grad);
+  margin: 0 12px;
+  border-radius: 22px;
+  padding: 12px 18px;
   text-align: center;
+  box-shadow: 0 10px 26px rgba(166, 245, 17, 0.22);
 }
 
 .app-hero .timer {
   font-family: var(--font-display);
-  font-size: 38px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 0.04em;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .app-stats {
   display: flex;
-  margin-top: 14px;
+  margin-top: 8px;
 }
 
 .app-stats div {
   flex: 1;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(11, 15, 10, 0.72);
 }
 
 .app-stats b {
   display: block;
-  color: #fff;
+  color: var(--ink);
   font-family: var(--font-display);
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -367,12 +472,13 @@ nav {
   font-size: 8px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  opacity: 0.75;
+  opacity: 0.8;
+  font-weight: 600;
 }
 
 /* — screen: plan chips — */
 .plan-chips {
-  padding: 14px 20px 4px;
+  padding: 8px 18px 0;
 }
 
 .plan-chips .label {
@@ -381,8 +487,10 @@ nav {
   letter-spacing: 0.18em;
   color: var(--text-muted);
   text-transform: uppercase;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
+
+.plan-chips .chip { font-size: 10px; padding: 6px 10px; }
 
 .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -395,13 +503,13 @@ nav {
   padding: 7px 11px;
   border-radius: 9px;
   border: 1px solid var(--hairline);
-  color: var(--text);
+  color: var(--text-muted);
   background: var(--surface-high);
 }
 
 .chip.done {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: rgba(166, 245, 17, 0.55);
+  color: var(--lime);
   background: var(--accent-soft);
 }
 
@@ -411,47 +519,104 @@ nav {
   background: var(--text-faint);
 }
 
-.chip.done .chip-dot { background: var(--accent); }
+.chip.done .chip-dot { background: var(--lime); }
 
-/* — screen: exercise cards — */
-.app-body { padding: 12px 20px; flex: 1; overflow: hidden; }
+/* — screen: exercise cards (hairline, medallion icons) — */
+.app-body { padding: 6px 18px 0; flex: 1; overflow: hidden; }
 
 .ex-card {
-  background: var(--surface);
+  background: var(--surface-high);
   border: 1px solid var(--hairline);
   border-radius: 14px;
-  padding: 12px 14px;
-  margin-bottom: 8px;
+  padding: 9px 12px;
+  margin-bottom: 5px;
   display: flex;
   align-items: center;
   gap: 11px;
 }
 
 .ex-icon {
-  width: 32px; height: 32px;
-  border-radius: 9px;
+  width: 30px; height: 30px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 13px;
   flex-shrink: 0;
 }
 
-.ex-name { font-size: 12px; font-weight: 700; }
-.ex-sub  { font-size: 10px; color: var(--text-muted); }
-
-/* — screen: bottom nav — */
-.app-nav {
-  display: flex;
-  justify-content: space-around;
-  padding: 12px 24px 18px;
-  border-top: 1px solid var(--hairline);
-  background: var(--bg);
+.ex-icon svg {
+  width: 15px; height: 15px;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.nav-dot { text-align: center; font-size: 8px; color: var(--text-faint); }
-.nav-dot .ico { font-size: 15px; margin-bottom: 3px; }
-.nav-dot.active { color: var(--accent); }
-.nav-dot.active .ico { color: var(--accent); }
+.ex-icon.chest { background: rgba(225, 75, 46, 0.14); }
+.ex-icon.chest svg { stroke: var(--coral); }
+.ex-icon.back { background: rgba(125, 178, 255, 0.14); }
+.ex-icon.back svg { stroke: var(--sky); }
+
+.ex-name { font-size: 12px; font-weight: 700; color: var(--text); }
+.ex-sub  { font-size: 10px; color: var(--text-muted); }
+
+/* — screen: the floating dock (center lime bolt FAB) — */
+.app-dock {
+  margin: 6px 10px 8px;
+  height: 56px;
+  background: rgba(6, 9, 4, 0.92);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+.dock-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-top: 3px;
+}
+
+.dock-item svg {
+  width: 18px; height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dock-item.active { color: var(--lime); }
+
+.dock-fab {
+  width: 44px; height: 44px;
+  margin: 0 4px;
+  transform: translateY(-14px);
+  background: var(--lime);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(166, 245, 17, 0.4),
+              0 4px 8px rgba(0, 0, 0, 0.35);
+}
+
+.dock-fab svg {
+  width: 20px; height: 20px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
 /* ═══ MARQUEE STRIP ════════════════════════════════ */
 .marquee-section {
@@ -471,8 +636,10 @@ nav {
 
 .marquee span {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--text-muted);
   white-space: nowrap;
   display: flex;
@@ -480,7 +647,7 @@ nav {
   gap: 56px;
 }
 
-.marquee span::after { content: "◦"; color: var(--accent); }
+.marquee span::after { content: "◦"; color: var(--lime); }
 
 @keyframes scroll { to { transform: translateX(-50%); } }
 
@@ -508,14 +675,14 @@ nav {
   font-family: var(--font-display);
   font-size: 12px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--lime);
   letter-spacing: 0.2em;
   margin-bottom: 16px;
 }
 
 .feature-text h2 {
   font-size: clamp(30px, 4vw, 44px);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.035em;
   margin-bottom: 18px;
 }
@@ -544,8 +711,8 @@ nav {
 
 .feature-list li::before {
   content: "—";
-  color: var(--accent);
-  font-weight: 800;
+  color: var(--lime);
+  font-weight: 700;
   flex-shrink: 0;
 }
 
@@ -562,12 +729,13 @@ nav {
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
   padding: 22px 24px;
-  transition: border-color 0.25s, transform 0.25s;
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
 }
 
 .mini-card:hover {
-  border-color: var(--hairline-strong);
+  border-color: rgba(166, 245, 17, 0.35);
   transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
 }
 
 .mc-label {
@@ -581,7 +749,7 @@ nav {
 
 .mc-big {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 34px;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
@@ -592,7 +760,7 @@ nav {
 /* progress bar element */
 .bar {
   height: 5px;
-  background: var(--surface-high);
+  background: var(--track);
   border-radius: 4px;
   overflow: hidden;
   margin-top: 16px;
@@ -602,21 +770,22 @@ nav {
   display: block;
   height: 100%;
   border-radius: 4px;
-  background: var(--accent);
+  background: var(--lime);
 }
 
-.bar.blue i  { background: #7DB2FF; }
+.bar.blue i  { background: var(--sky); }
 .bar.green i { background: #6EE7A0; }
-.bar.amber i { background: #FBBF68; }
+.bar.amber i { background: var(--sun); }
 
-/* ring visual */
+/* ring visual — lime→mint energy arc */
 .ring-wrap { display: flex; gap: 20px; align-items: center; }
 
 .ring {
   width: 110px; height: 110px;
   border-radius: 50%;
-  background:
-    conic-gradient(var(--accent) 0 62%, var(--surface-high) 62% 100%);
+  position: relative;
+  background: conic-gradient(#8FE830 0%, #34E5B0 62%, var(--track) 62% 100%);
+  box-shadow: 0 0 30px rgba(166, 245, 17, 0.18);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -634,7 +803,7 @@ nav {
   position: relative;
   font-family: var(--font-display);
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -659,7 +828,7 @@ nav {
   display: block;
   font-family: var(--font-display);
   font-size: 21px;
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -685,8 +854,8 @@ nav {
   color: var(--text-faint);
 }
 
-.wd.on  { background: var(--accent); color: #fff; }
-.wd.now { box-shadow: 0 0 0 2px var(--accent); }
+.wd.on  { background: var(--lime); color: var(--ink); }
+.wd.now { box-shadow: 0 0 0 2px var(--lime); color: var(--lime); }
 
 /* ═══ BENTO ════════════════════════════════════════ */
 .bento-section { padding: 80px 0 120px; }
@@ -704,12 +873,16 @@ nav {
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
   padding: 26px;
-  transition: border-color 0.25s, transform 0.25s;
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
   overflow: hidden;
   position: relative;
 }
 
-.b-cell:hover { border-color: var(--hairline-strong); transform: translateY(-3px); }
+.b-cell:hover {
+  border-color: rgba(166, 245, 17, 0.35);
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+}
 
 .b-cell.wide { grid-column: span 2; }
 .b-cell.tall { grid-row: span 2; }
@@ -744,7 +917,7 @@ nav {
   transition: border-color 0.2s;
 }
 
-.tech-pill:hover { border-color: var(--accent); }
+.tech-pill:hover { border-color: var(--lime); }
 
 .tech-pill small {
   display: block;
@@ -769,13 +942,13 @@ nav {
   width: 600px; height: 600px;
   left: 50%; top: 60%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 60%);
+  background: radial-gradient(circle, rgba(166, 245, 17, 0.12) 0%, transparent 60%);
   pointer-events: none;
 }
 
 .cta h2 {
   font-size: clamp(40px, 6vw, 68px);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.04em;
   margin-bottom: 20px;
 }
@@ -835,10 +1008,28 @@ footer {
   .b-cell.wide { grid-column: span 1; }
   .b-cell.tall { grid-row: span 1; }
   .phone { width: 260px; height: 540px; }
+  .plan-chips .chip { font-size: 9.5px; padding: 6px 9px; }
+  .app-body .ex-card:nth-child(3) { display: none; }
+  .hero-meta { gap: 18px; }
+  .hero-meta .stat { min-width: 0; }
+}
+
+/* respect users who disable animations — keep the depth, drop the motion */
+@media (prefers-reduced-motion: reduce) {
+  .aurora i, .app-aurora i, .phone, .hero-glow, .marquee { animation: none !important; }
+  .reveal { transition: none; }
+  html { scroll-behavior: auto; }
 }
 </style>
 </head>
 <body>
+
+<!-- ambient aurora — the same three drifting glows as the app skin -->
+<div class="aurora" aria-hidden="true">
+  <i class="a1"></i>
+  <i class="a2"></i>
+  <i class="a3"></i>
+</div>
 
 <!-- ═══════════════ NAV ═══════════════ -->
 <nav>
@@ -885,13 +1076,14 @@ footer {
       </div>
     </div>
 
-    <!-- Pure-CSS phone mockup: the active workout screen -->
+    <!-- Pure-CSS phone mockup: the Gen-Z skin active workout screen -->
     <div class="phone-wrap reveal reveal-d2">
       <div class="phone">
         <div class="phone-notch"></div>
         <div class="screen">
+          <div class="app-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
           <div class="statusbar">
-            <span>13:08</span><span>93% ▮</span>
+            <span>13:08</span><span>93%</span>
           </div>
           <div class="app-header">Active Workout</div>
 
@@ -916,21 +1108,27 @@ footer {
 
           <div class="app-body">
             <div class="ex-card">
-              <div class="ex-icon" style="background:rgba(239,68,68,.14);color:#EF4444;">▤</div>
+              <div class="ex-icon chest">
+                <svg viewBox="0 0 24 24"><path d="M6.5 6.5h11M6.5 17.5h11M8.5 6.5v11M15.5 6.5v11M8.5 12h7"/></svg>
+              </div>
               <div>
                 <div class="ex-name">Bench Press</div>
                 <div class="ex-sub">3 sets · 60, 62.5, 62.5 kg</div>
               </div>
             </div>
             <div class="ex-card">
-              <div class="ex-icon" style="background:rgba(239,68,68,.14);color:#EF4444;">▤</div>
+              <div class="ex-icon chest">
+                <svg viewBox="0 0 24 24"><path d="M6.5 6.5h11M6.5 17.5h11M8.5 6.5v11M15.5 6.5v11M8.5 12h7"/></svg>
+              </div>
               <div>
                 <div class="ex-name">Incline Bench Press</div>
                 <div class="ex-sub">2 sets · 50, 50 kg</div>
               </div>
             </div>
             <div class="ex-card">
-              <div class="ex-icon" style="background:rgba(59,130,246,.14);color:#3B82F6;">▤</div>
+              <div class="ex-icon back">
+                <svg viewBox="0 0 24 24"><path d="M5 8h14M12 8v11M9 19h6"/></svg>
+              </div>
               <div>
                 <div class="ex-name">Lat Pulldown</div>
                 <div class="ex-sub">1 set · 45 kg</div>
@@ -938,12 +1136,27 @@ footer {
             </div>
           </div>
 
-          <div class="app-nav">
-            <div class="nav-dot active"><div class="ico">▤</div>Train</div>
-            <div class="nav-dot"><div class="ico">▦</div>Plan</div>
-            <div class="nav-dot"><div class="ico">▦</div>Steps</div>
-            <div class="nav-dot"><div class="ico">▦</div>Body</div>
-            <div class="nav-dot"><div class="ico">⚡</div>More</div>
+          <!-- the floating dock: Train · Plan · ⚡Summary · Body · Steps -->
+          <div class="app-dock">
+            <div class="dock-item active">
+              <svg viewBox="0 0 24 24"><path d="M6.5 6.5h11M6.5 17.5h11M8.5 6.5v11M15.5 6.5v11M8.5 12h7"/></svg>
+              Train
+            </div>
+            <div class="dock-item">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+              Plan
+            </div>
+            <div class="dock-fab" title="Summary dashboard">
+              <svg viewBox="0 0 24 24"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            </div>
+            <div class="dock-item">
+              <svg viewBox="0 0 24 24"><path d="M12 3v18M5 8h14"/></svg>
+              Body
+            </div>
+            <div class="dock-item">
+              <svg viewBox="0 0 24 24"><path d="M13 4a3 3 0 1 0 0 6h3M13 4h6M13 10v9M9 19h8"/></svg>
+              Steps
+            </div>
           </div>
         </div>
       </div>
@@ -1078,7 +1291,7 @@ footer {
             <div class="ring"><b>7,214</b></div>
             <div>
               <div class="mc-sub" style="margin-top:0;">of 10,000 goal</div>
-              <div class="mc-sub" style="color:var(--accent);font-weight:700;">
+              <div class="mc-sub" style="color:var(--lime);font-weight:700;">
                 72% · 2,786 to go
               </div>
               <div class="bar" style="width:130px;"><i style="width:72%;"></i></div>
@@ -1168,14 +1381,14 @@ footer {
             <div style="flex:1;background:var(--surface-high);border-radius:4px 4px 0 0;height:88%;"></div>
             <div style="flex:1;background:var(--surface-high);border-radius:4px 4px 0 0;height:45%;"></div>
             <div style="flex:1;background:var(--surface-high);border-radius:4px 4px 0 0;height:75%;"></div>
-            <div style="flex:1;background:var(--accent);border-radius:4px 4px 0 0;height:92%;"></div>
+            <div style="flex:1;background:var(--lime);border-radius:4px 4px 0 0;height:92%;"></div>
             <div style="flex:1;background:var(--surface-high);border-radius:4px 4px 0 0;height:30%;"></div>
             <div style="flex:1;background:var(--surface-high);border-radius:4px 0 0 0;height:55%;"></div>
           </div>
           <div style="display:flex;gap:6px;margin-top:6px;font-size:8.5px;color:var(--text-faint);font-weight:700;">
             <span style="flex:1;text-align:center;">M</span><span style="flex:1;text-align:center;">T</span>
             <span style="flex:1;text-align:center;">W</span><span style="flex:1;text-align:center;">T</span>
-            <span style="flex:1;text-align:center;color:var(--accent);">F</span>
+            <span style="flex:1;text-align:center;color:var(--lime);">F</span>
             <span style="flex:1;text-align:center;">S</span><span style="flex:1;text-align:center;">S</span>
           </div>
         </div>
@@ -1203,11 +1416,12 @@ footer {
       </div>
       <div class="b-cell wide reveal reveal-d1">
         <span class="ico">🌙</span>
-        <h3>Dark-first design system</h3>
-        <p>One accent color, flat surfaces, hairline borders, editorial
-        typography with tabular numerals, haptics on key actions, and
-        adaptive navigation that goes bottom-bar on phones and side-rail
-        on desktop.</p>
+        <h3>Neon-gym design system</h3>
+        <p>Signature lime on a deep green-black canvas, lime→mint energy
+        gradients, hairline glass cards floating over a drifting
+        lime-mint-sky aurora, Space Grotesk everywhere with tabular
+        numerals, haptics on key actions, and adaptive navigation that
+        goes bottom-dock on phones and side-rail on desktop.</p>
       </div>
       <div class="b-cell reveal reveal-d2">
         <span class="ico">📍</span>
@@ -1281,7 +1495,7 @@ footer {
 <footer>
   <div class="container footer-inner">
     <a class="logo" href="#" style="font-size:15px;">
-      <span class="logo-mark" style="width:22px;height:22px;font-size:11px;">H</span>
+      <span class="logo-mark" style="width:22px;height:22px;font-size:11px;border-radius:7px;">H</span>
       HITFINITY<span class="accent">.</span>
     </a>
     <p>Built with intent. MIT licensed.</p>

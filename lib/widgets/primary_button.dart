@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// The main call-to-action button with a gradient background.
-/// Use for "Start Workout", "Add Set", "Finish" — the primary action on each screen.
 class PrimaryButton extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -19,20 +17,19 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     final button = Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-        gradient: LinearGradient(
-          colors: [scheme.primary, scheme.tertiary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        borderRadius: BorderRadius.circular(999),
+        gradient: AppTheme.limeMint,
         boxShadow: [
           BoxShadow(
-            color: scheme.primary.withOpacity(0.3),
-            blurRadius: 12,
+            color: AppTheme.lime.withValues(alpha: 0.30),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
@@ -40,27 +37,28 @@ class PrimaryButton extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+          borderRadius: BorderRadius.circular(999),
           onTap: onPressed,
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppTheme.spaceLG,
-              vertical: AppTheme.spaceMD,
+              vertical: 15,
             ),
             child: Row(
               mainAxisSize:
                   expanded ? MainAxisSize.max : MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: scheme.onPrimary, size: 22),
+                Icon(icon, color: AppTheme.ink, size: 21),
                 const SizedBox(width: AppTheme.spaceSM),
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: scheme.onPrimary,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
-                      ),
+                  style:       TextStyle(
+                    color: AppTheme.ink,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    letterSpacing: 0.4,
+                  ),
                 ),
               ],
             ),

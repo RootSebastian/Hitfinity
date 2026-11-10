@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// A section title: small caps label + optional action button on the right.
 class SectionHeader extends StatelessWidget {
   final String title;
   final Widget? action;
@@ -10,20 +9,31 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hairline =
+        AppTheme.hairline(Theme.of(context).brightness);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceMD),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.spaceMD),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             title.toUpperCase(),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2.5,
+              color: AppTheme.textMuted,
+            ),
           ),
-          if (action != null) action!,
+          const SizedBox(width: AppTheme.spaceMD),
+          Expanded(
+            child: Container(height: 1, color: hairline),
+          ),
+          if (action != null) ...[
+            const SizedBox(width: AppTheme.spaceSM),
+            action!,
+          ],
         ],
       ),
     );

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../database/app_database.dart';
 import '../database/database_provider.dart';
@@ -9,7 +8,9 @@ import '../models/workout_draft.dart';
 import '../theme/app_theme.dart';
 import '../theme/aurora_background.dart';
 import '../theme/glass_card.dart';
+import '../widgets/hit_widgets.dart';
 import 'active_workout_screen.dart';
+import '../services/hit_settings.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +23,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late final Stream<List<WorkoutSessionWithSets>> _workoutsStream =
       DatabaseProvider.instance.watchAllWorkouts();
 
-  // ─── Live session draft (survives app kill) ────────
   WorkoutDraft? _draft;
   StreamSubscription<WorkoutDraft?>? _draftSub;
   Timer? _draftTick;
@@ -46,8 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  /// Keeps the banner's elapsed time fresh while a session
-  /// is live.
   void _syncTicker() {
     if (_draft != null && _draftTick == null) {
       _draftTick = Timer.periodic(const Duration(seconds: 15), (_) {
@@ -95,15 +93,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           DateFormat('EEEE, MMMM d')
                               .format(DateTime.now())
                               .toUpperCase(),
-                          style:
-                              theme.textTheme.labelSmall?.copyWith(
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
                             letterSpacing: 2.5,
-                            color: theme
-                                .colorScheme.onSurfaceVariant,
+                            color: AppTheme.textMuted,
                           ),
                         ),
                         const SizedBox(height: AppTheme.spaceMD),
-                                                Text.rich(
+                        Text.rich(
                           TextSpan(
                             children: [
                               TextSpan(
@@ -114,10 +112,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   text: _draft != null
                                       ? 'training'
                                       : 'train'),
-                              TextSpan(
+                                    TextSpan(
                                 text: '.',
-                                style: const TextStyle(
-                                    color: AppTheme.accent),
+                                style: TextStyle(
+                                    color: AppTheme.lime),
                               ),
                             ],
                           ),
@@ -138,7 +136,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // ═══ Primary action: Resume OR Start ═══
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -159,12 +156,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                         vertical: AppTheme.spaceXL),
-                    child: _EmptyState(),
+                    child: const _EmptyState(),
                   ),
                 )
               else ...[
                 const SliverToBoxAdapter(
-                  child: _SectionLabel('RECENT'),
+                  child: SectionHeader('RECENT'),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(
@@ -191,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _startNewWorkout() async {
-    HapticFeedback.mediumImpact();
+    HitHaptics.mediumImpact();
     final result = await Navigator.push<WorkoutResult>(
       context,
       MaterialPageRoute(
@@ -201,8 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _resumeWorkout() async {
-    HapticFeedback.mediumImpact();
-    // No editingSession — the screen auto-loads the draft.
+    HitHaptics.mediumImpact();
     final result = await Navigator.push<WorkoutResult>(
       context,
       MaterialPageRoute(
@@ -218,16 +214,16 @@ class _HomeScreenState extends State<HomeScreen> {
       duration: result.duration,
       sets: result.sets,
     );
-    if (mounted) HapticFeedback.heavyImpact();
+    if (mounted) HitHaptics.heavyImpact();
   }
 
   Future<void> _discardWorkout() async {
-    HapticFeedback.lightImpact();
+    HitHaptics.lightImpact();
     await DatabaseProvider.instance.clearWorkoutDraft();
   }
 
   Future<void> _editWorkout(WorkoutSessionWithSets session) async {
-    HapticFeedback.selectionClick();
+    HitHaptics.selectionClick();
     final result = await Navigator.push<WorkoutResult>(
       context,
       MaterialPageRoute(
@@ -240,11 +236,9 @@ class _HomeScreenState extends State<HomeScreen> {
       sessionId: session.id,
       sets: result.sets,
     );
-    if (mounted) HapticFeedback.mediumImpact();
+    if (mounted) HitHaptics.mediumImpact();
   }
 }
-
-// ═══════════════ Sub-widgets ═══════════════
 
 class _WeekStrip extends StatelessWidget {
   final List<WorkoutSessionWithSets> workouts;
@@ -252,7 +246,6 @@ class _WeekStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final weekStart = today
@@ -264,47 +257,10 @@ class _WeekStrip extends StatelessWidget {
       if (i >= 0 && i < 7) trainedDays.add(i);
     }
 
-    const letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-    return Row(
-      children: [
-        for (var i = 0; i < 7; i++)
-          Expanded(
-            child: Column(
-              children: [
-                Container(
-                  width: 11,
-                  height: 11,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: trainedDays.contains(i)
-                        ? AppTheme.accent
-                        : theme.colorScheme
-                            .surfaceContainerHighest,
-                    border: i == today.weekday - 1
-                        ? Border.all(color: AppTheme.accent, width: 1.5)
-                        : null,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  letters[i],
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 9,
-                    letterSpacing: 0.5,
-                    color: i == today.weekday - 1
-                        ? AppTheme.accent
-                        : theme.colorScheme.onSurfaceVariant
-                            .withOpacity(0.6),
-                    fontWeight: i == today.weekday - 1
-                        ? FontWeight.w700
-                        : FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
+    return WeekStrip(
+      weekStart: weekStart,
+      today: now,
+      markedDays: trainedDays,
     );
   }
 }
@@ -338,65 +294,43 @@ class _WeekStats extends StatelessWidget {
       }
     }
 
-    return GlassCard(
-      padding: EdgeInsets.zero,
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            _cell(context, '${week.length}', 'SESSIONS'),
-            _divider(context),
-            _cell(context, '$sets', 'SETS'),
-            _divider(context),
-            _cell(
-              context,
-              heaviest != null
-                  ? (heaviest == heaviest!.roundToDouble()
-                      ? heaviest!.round().toString()
-                      : heaviest!.toStringAsFixed(1))
-                  : '—',
-              'TOP KG',
-            ),
-          ],
+    return Row(
+      children: [
+        Expanded(
+          child: StatTile(
+            icon: Icons.fitness_center_rounded,
+            value: '${week.length}',
+            label: 'SESSIONS',
+            color: AppTheme.lime,
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _divider(BuildContext context) => Container(
-      width: 1,
-      color: AppTheme.hairline(Theme.of(context).brightness));
-
-  Widget _cell(BuildContext context, String value, String label) {
-    final theme = Theme.of(context);
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                letterSpacing: 1.5,
-                fontSize: 9,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        const SizedBox(width: AppTheme.spaceMD),
+        Expanded(
+          child: StatTile(
+            icon: Icons.repeat_rounded,
+            value: '$sets',
+            label: 'SETS',
+            color: AppTheme.mint,
+          ),
         ),
-      ),
+        const SizedBox(width: AppTheme.spaceMD),
+        Expanded(
+          child: StatTile(
+            icon: Icons.monitor_weight_rounded,
+            value: heaviest != null
+                ? (heaviest == heaviest.roundToDouble()
+                    ? heaviest.round().toString()
+                    : heaviest.toStringAsFixed(1))
+                : '—',
+            label: 'TOP KG',
+            color: AppTheme.sky,
+          ),
+        ),
+      ],
     );
   }
 }
 
-/// Replaces the Start button while a live session exists.
 class _ResumeCard extends StatelessWidget {
   final WorkoutDraft draft;
   final VoidCallback onResume;
@@ -412,11 +346,11 @@ class _ResumeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final elapsed =
         DateTime.now().difference(draft.startTime);
 
     return GlassCard(
+      glow: true,
       onTap: onResume,
       padding: EdgeInsets.zero,
       child: IntrinsicHeight(
@@ -425,10 +359,10 @@ class _ResumeCard extends StatelessWidget {
           children: [
             Container(
               width: 5,
-              decoration: const BoxDecoration(
-                color: AppTheme.accent,
+              decoration:       BoxDecoration(
+                gradient: AppTheme.heroGradient,
                 borderRadius: BorderRadius.horizontal(
-                    left: Radius.circular(16)),
+                    left: Radius.circular(20)),
               ),
             ),
             Expanded(
@@ -438,23 +372,37 @@ class _ResumeCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'SESSION IN PROGRESS',
-                      style:
-                          theme.textTheme.labelSmall?.copyWith(
-                        letterSpacing: 2.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.accent,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration:       BoxDecoration(
+                            color: AppTheme.lime,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                              Text(
+                          'SESSION IN PROGRESS',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            letterSpacing: 2.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.lime,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     Text(
                       fmtElapsed(elapsed),
-                      style:
-                          theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: -1,
-                        fontFeatures: const [
+                        color: AppTheme.text,
+                        fontFeatures: [
                           FontFeature.tabularFigures()
                         ],
                       ),
@@ -462,9 +410,9 @@ class _ResumeCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${draft.sets.length} sets logged — tap to resume',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color:
-                            theme.colorScheme.onSurfaceVariant,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
                       ),
                     ),
                   ],
@@ -472,9 +420,8 @@ class _ResumeCard extends StatelessWidget {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.close,
-                  size: 18,
-                  color: theme.colorScheme.onSurfaceVariant),
+              icon: Icon(Icons.close_rounded,
+                  size: 18, color: AppTheme.textMuted),
               onPressed: onDiscard,
               tooltip: 'Discard session',
             ),
@@ -491,9 +438,8 @@ class _StartButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Material(
-      color: AppTheme.accent,
+      color: AppTheme.lime,
       borderRadius: BorderRadius.circular(AppTheme.radiusLG),
       child: InkWell(
         onTap: onTap,
@@ -505,17 +451,18 @@ class _StartButton extends StatelessWidget {
                 horizontal: AppTheme.spaceLG),
             child: Row(
               children: [
-                Text(
+                      Text(
                   'START SESSION',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: AppTheme.ink,
                     fontWeight: FontWeight.w800,
+                    fontSize: 14,
                     letterSpacing: 1.5,
                   ),
                 ),
                 const Spacer(),
-                const Icon(Icons.arrow_forward_rounded,
-                    color: Colors.white, size: 22),
+                      Icon(Icons.arrow_forward_rounded,
+                    color: AppTheme.ink, size: 22),
               ],
             ),
           ),
@@ -525,70 +472,51 @@ class _StartButton extends StatelessWidget {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppTheme.spaceLG,
-        AppTheme.spaceXL,
-        AppTheme.spaceLG,
-        AppTheme.spaceMD,
-      ),
-      child: Row(
-        children: [
-          Text(
-            text,
-            style: theme.textTheme.labelSmall?.copyWith(
-              letterSpacing: 2.5,
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: AppTheme.spaceMD),
-          Expanded(
-            child: Container(
-              height: 1,
-              color: AppTheme.hairline(theme.brightness),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceAlt,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppTheme.hairlineDark),
+          ),
+          child: Icon(
+            Icons.fitness_center_rounded,
+            size: 28,
+            color: AppTheme.textMuted,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceMD),
         Text.rich(
           TextSpan(
-            children: [
-              const TextSpan(text: 'Day one'),
+            children:       [
+              TextSpan(text: 'Day one'),
               TextSpan(
                   text: '.',
-                  style:
-                      TextStyle(color: AppTheme.accent)),
+                  style: TextStyle(color: AppTheme.lime)),
             ],
           ),
-          style: theme.textTheme.headlineMedium?.copyWith(
+          style: TextStyle(
+            fontSize: 26,
             fontWeight: FontWeight.w700,
             letterSpacing: -1,
+            color: AppTheme.text,
           ),
         ),
         const SizedBox(height: AppTheme.spaceSM),
-        Text(
+         Text(
           'Your first session writes the opening line.',
           textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+          style: TextStyle(
+            fontSize: 13,
+            color: AppTheme.textMuted,
           ),
         ),
       ],
@@ -603,8 +531,6 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     final weightsByEx = <String, List<double>>{};
     final dotsByEx = <String, Color>{};
     final order = <String>[];
@@ -632,19 +558,19 @@ class _SessionCard extends StatelessWidget {
         key: ValueKey('workout-${session.id}'),
         direction: DismissDirection.endToStart,
         onDismissed: (_) {
-          HapticFeedback.mediumImpact();
+          HitHaptics.mediumImpact();
           DatabaseProvider.instance.deleteWorkout(session.id);
         },
         background: Container(
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 24),
           decoration: BoxDecoration(
-            color: theme.colorScheme.errorContainer,
+            color: AppTheme.coral,
             borderRadius:
-                BorderRadius.circular(AppTheme.radiusLG),
+                BorderRadius.circular(AppTheme.radiusXL),
           ),
-          child: Icon(Icons.delete_outline,
-              color: theme.colorScheme.onErrorContainer),
+          child: const Icon(Icons.delete_outline_rounded,
+              color: Colors.white),
         ),
         child: GlassCard(
           onTap: onEdit,
@@ -665,37 +591,33 @@ class _SessionCard extends StatelessWidget {
                       DateFormat('EEE, MMM d')
                           .format(session.startTime)
                           .toUpperCase(),
-                      style:
-                          theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 1,
+                        color: AppTheme.text,
                       ),
                     ),
                     const SizedBox(width: AppTheme.spaceSM),
                     Text(
                       DateFormat('HH:mm')
                           .format(session.startTime),
-                      style: theme.textTheme.labelMedium
-                          ?.copyWith(
-                        color: theme
-                            .colorScheme.onSurfaceVariant,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppTheme.textMuted,
                       ),
                     ),
                     const Spacer(),
-                    Icon(
+                     Icon(
                       Icons.edit_outlined,
                       size: 15,
-                      color: theme
-                          .colorScheme.onSurfaceVariant
-                          .withOpacity(0.6),
+                      color: AppTheme.textMuted,
                     ),
                   ],
                 ),
               ),
-              Divider(
-                  height: 1,
-                  color: AppTheme.hairline(
-                      theme.brightness)),
+              const Divider(
+                  height: 1, color: AppTheme.hairlineDark),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppTheme.spaceMD,
@@ -721,23 +643,20 @@ class _SessionCard extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 name,
-                                style: theme
-                                    .textTheme.bodyMedium
-                                    ?.copyWith(
-                                  color: theme.colorScheme
-                                      .onSurfaceVariant,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.textMuted,
                                 ),
                               ),
                             ),
                             Text(
                               _w(weightsByEx[name]),
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(
-                                fontWeight:
-                                    FontWeight.w700,
-                                fontFeatures: const [
-                                  FontFeature
-                                      .tabularFigures()
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.text,
+                                fontFeatures: [
+                                  FontFeature.tabularFigures()
                                 ],
                               ),
                             ),
@@ -752,12 +671,9 @@ class _SessionCard extends StatelessWidget {
                           children: [
                             Text(
                               '+${order.length - 3} more',
-                              style: theme.textTheme.bodySmall
-                                  ?.copyWith(
-                                color: theme
-                                    .colorScheme
-                                    .onSurfaceVariant
-                                    .withOpacity(0.6),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: AppTheme.textMuted,
                               ),
                             ),
                           ],
@@ -766,10 +682,8 @@ class _SessionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Divider(
-                  height: 1,
-                  color: AppTheme.hairline(
-                      theme.brightness)),
+              const Divider(
+                  height: 1, color: AppTheme.hairlineDark),
               Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppTheme.spaceMD),
@@ -810,12 +724,10 @@ class _SessionCard extends StatelessWidget {
   Widget _vd(BuildContext context) => Container(
         width: 1,
         margin: const EdgeInsets.symmetric(vertical: 6),
-        color: AppTheme.hairline(
-            Theme.of(context).brightness),
+        color: AppTheme.hairlineDark,
       );
 
   Widget _mini(BuildContext context, String v, String l) {
-    final theme = Theme.of(context);
     return Expanded(
       child: Padding(
         padding:
@@ -824,19 +736,21 @@ class _SessionCard extends StatelessWidget {
           children: [
             Text(
               v,
-              style: theme.textTheme.titleSmall?.copyWith(
+              style: TextStyle(
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
-                fontFeatures: const [
+                color: AppTheme.text,
+                fontFeatures: [
                   FontFeature.tabularFigures()
                 ],
               ),
             ),
             Text(
               l,
-              style: theme.textTheme.labelSmall?.copyWith(
+              style: TextStyle(
                 fontSize: 8.5,
                 letterSpacing: 1.2,
-                color: theme.colorScheme.onSurfaceVariant,
+                color: AppTheme.textMuted,
               ),
             ),
           ],

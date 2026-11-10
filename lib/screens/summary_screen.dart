@@ -1,29 +1,33 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../database/app_database.dart';
 import '../database/database_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/glass_card.dart';
+import '../widgets/hit_widgets.dart';
+import 'settings_screen.dart';
+import '../services/hit_settings.dart';
 
 class SummaryScreen extends StatefulWidget {
-  const SummaryScreen({super.key});
+  const SummaryScreen({super.key, this.onOpenTab});
+
+  final ValueChanged<int>? onOpenTab;
 
   @override
   State<SummaryScreen> createState() => _SummaryScreenState();
 }
 
 class _SummaryScreenState extends State<SummaryScreen> {
-  int _view = 0; // 0 = Day, 1 = Week
+  int _view = 0;
 
   final NumberFormat _fmtInt = NumberFormat('#,##0');
 
-  static const _proteinColor = Color(0xFF7DB2FF);
-  static const _carbColor = Color(0xFF6EE7A0);
-  static const _fatColor = Color(0xFFFBBF68);
+  static const _proteinColor = AppTheme.protein;
+  static const _carbColor = AppTheme.carbs;
+  static const _fatColor = AppTheme.fat;
 
   List<WorkoutSessionWithSets> _workouts = [];
   List<WalkSessionRow> _walks = [];
@@ -38,8 +42,8 @@ class _SummaryScreenState extends State<SummaryScreen> {
     return DateTime(n.year, n.month, n.day);
   }
 
-  static DateTime get _weekStart => _todayStart
-      .subtract(Duration(days: _todayStart.weekday - 1));
+  static DateTime get _weekStart =>
+      _todayStart.subtract(Duration(days: _todayStart.weekday - 1));
 
   @override
   void initState() {
@@ -53,8 +57,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
 
     listen(DatabaseProvider.instance.watchAllWorkouts(),
         (d) => _workouts = d);
-    listen(DatabaseProvider.instance.watchAllWalks(),
-        (d) => _walks = d);
+    listen(DatabaseProvider.instance.watchAllWalks(), (d) => _walks = d);
     listen(DatabaseProvider.instance.watchBodyWeights(),
         (d) => _weights = d);
     listen(
@@ -78,8 +81,6 @@ class _SummaryScreenState extends State<SummaryScreen> {
     super.dispose();
   }
 
-  // ─── Scoped stats ───────────────────────────────────
-
   List<WorkoutSessionWithSets> get _dayWorkouts => _workouts
       .where((w) => !w.startTime.isBefore(_todayStart))
       .toList();
@@ -98,10 +99,13 @@ class _SummaryScreenState extends State<SummaryScreen> {
 
   double get _todayKcal =>
       _todayFood.fold(0.0, (a, e) => a + e.calories);
+
   double get _todayProtein =>
       _todayFood.fold(0.0, (a, e) => a + e.proteinG);
+
   double get _todayCarbs =>
       _todayFood.fold(0.0, (a, e) => a + e.carbsG);
+
   double get _todayFat =>
       _todayFood.fold(0.0, (a, e) => a + e.fatG);
 
@@ -127,6 +131,22 @@ class _SummaryScreenState extends State<SummaryScreen> {
       : _weekFood.fold(0.0, (a, e) => a + e.calories) /
           _daysLogged;
 
+  Set<int> get _activeWeekDays {
+    final days = <int>{};
+    void mark(DateTime start) {
+      final i = start.difference(_weekStart).inDays;
+      if (i >= 0 && i < 7) days.add(i);
+    }
+
+    for (final w in _weekWorkouts) {
+      mark(w.startTime);
+    }
+    for (final w in _weekWalks) {
+      mark(w.startTime);
+    }
+    return days;
+  }
+
   String get _verdict {
     if (_view == 0) {
       if (_dayWorkouts.isNotEmpty && _todayFood.isNotEmpty) {
@@ -150,221 +170,218 @@ class _SummaryScreenState extends State<SummaryScreen> {
     }
   }
 
-  // ─── Build ──────────────────────────────────────────
+  void _openSettings() {
+    HitHaptics.selectionClick();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Summary')),
-      body: Column(
-        children: [
-          _buildSegmentedSwitch(theme),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: KeyedSubtree(
-                key: ValueKey(_view),
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.spaceLG),
-                  children: [
-                    _buildHero(theme),
-                    _SectionLabel('TRAINING'),
-                    _buildTrainingCard(theme),
-                    _SectionLabel('MOVEMENT'),
-                    _buildMovementCard(theme),
-                    _SectionLabel('NUTRITION'),
-                    _buildNutritionCard(theme),
-                    _SectionLabel('BODY'),
-                    _buildBodyCard(theme),
-                    const SizedBox(height: 140),
-                  ],
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            GreetingHeader(
+              subtitle: _verdict,
+              onSettingsTap: _openSettings,
+            ),
+            const SizedBox(height: AppTheme.spaceMD),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spaceLG),
+              child: SegmentSwitch(
+                options: const ['Day', 'Week'],
+                index: _view,
+                onChanged: (i) => setState(() => _view = i),
+              ),
+            ),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: KeyedSubtree(
+                  key: ValueKey(_view),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                        AppTheme.spaceLG,
+                        AppTheme.spaceLG,
+                        AppTheme.spaceLG,
+                        96),
+                    children: [
+                      _buildChallengeBanner(),
+                      const SizedBox(height: AppTheme.spaceLG),
+                      WeekStrip(
+                        weekStart: _weekStart,
+                        markedDays: _activeWeekDays,
+                      ),
+                      const SizedBox(height: AppTheme.spaceLG),
+                      _buildStatTiles(theme),
+                      if (widget.onOpenTab != null) ...[
+                        const SectionHeader('QUICK ACTIONS'),
+                        _buildQuickActions(theme),
+                      ],
+                      const SectionHeader('TRAINING'),
+                      _buildTrainingCard(theme),
+                      const SectionHeader('MOVEMENT'),
+                      _buildMovementCard(theme),
+                      const SectionHeader('NUTRITION'),
+                      _buildNutritionCard(theme),
+                      const SectionHeader('BODY'),
+                      _buildBodyCard(theme),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSegmentedSwitch(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppTheme.spaceLG,
-        AppTheme.spaceMD,
-        AppTheme.spaceLG,
-        AppTheme.spaceSM,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          children: [
-            _segment(0, 'Day'),
-            _segment(1, 'Week'),
           ],
         ),
       ),
     );
   }
 
-  Widget _segment(int index, String label) {
-    final selected = _view == index;
-    final theme = Theme.of(context);
-
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(21),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          setState(() => _view = index);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          height: 38,
-          decoration: BoxDecoration(
-            color: selected ? AppTheme.accent : null,
-            borderRadius: BorderRadius.circular(21),
+  Widget _buildChallengeBanner() {
+    final sessions = _weekWorkouts.length;
+    return ChallengeBanner(
+      subtitle: sessions == 0
+          ? 'No sessions yet — start the streak'
+          : '$sessions of 6 sessions done this week',
+      progress: (sessions / 6).clamp(0.0, 1.0),
+      onTap: () {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Challenge locked in — 14 days of energy 🔥'),
           ),
-          child: Center(
-            child: Text(
-              label.toUpperCase(),
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: selected
-                    ? Colors.white
-                    : theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  // ─── Hero: pure typography, no card ────────────────
-
-  Widget _buildHero(ThemeData theme) {
+  Widget _buildStatTiles(ThemeData theme) {
     final isDay = _view == 0;
-
-    final range = isDay
-        ? DateFormat('EEEE, MMM d')
-            .format(DateTime.now())
-            .toUpperCase()
-        : '${DateFormat('MMM d').format(_weekStart).toUpperCase()}'
-            ' — ${DateFormat('MMM d').format(_weekStart.add(const Duration(days: 6))).toUpperCase()}';
 
     final daySteps = _dayWalks.fold(0, (a, w) => a + w.steps);
     final weekSteps = _weekWalks.fold(0, (a, w) => a + w.steps);
 
-    return Padding(
-      padding: const EdgeInsets.only(top: AppTheme.spaceMD),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            range,
-            style: theme.textTheme.labelSmall?.copyWith(
-              letterSpacing: 2.5,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          isDay
+              ? DateFormat('EEEE, MMM d')
+                  .format(DateTime.now())
+                  .toUpperCase()
+              : '${DateFormat('MMM d').format(_weekStart).toUpperCase()}'
+                  ' — ${DateFormat('MMM d').format(_weekStart.add(const Duration(days: 6))).toUpperCase()}',
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 2.5,
+            color: AppTheme.textMuted,
           ),
-          const SizedBox(height: AppTheme.spaceSM),
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(text: _verdict),
-                TextSpan(
-                  text: '.',
-                  style:
-                      TextStyle(color: AppTheme.accent),
-                ),
-              ],
-            ),
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: -1.5,
-            ),
-          ),
-          const SizedBox(height: AppTheme.spaceLG),
-          GlassCard(
-            padding: EdgeInsets.zero,
-            child: IntrinsicHeight(
-              child: Row(
-                children: [
-                  _cell(
+        ),
+        const SizedBox(height: AppTheme.spaceSM),
+        Row(
+          children: [
+            Expanded(
+              child: StatTile(
+                icon: Icons.fitness_center_rounded,
+                value:
                     '${isDay ? _dayWorkouts.length : _weekWorkouts.length}',
-                    'WORKOUTS',
-                  ),
-                  _vd(),
-                  _cell(
-                    _fmtInt
-                        .format(isDay ? daySteps : weekSteps),
-                    'STEPS',
-                  ),
-                  _vd(),
-                  _cell(
-                    _fmtInt.format(isDay
-                        ? _todayKcal.round()
-                        : _avgKcal.round()),
-                    isDay ? 'KCAL' : 'KCAL / DAY',
-                  ),
-                ],
+                label: isDay ? 'WORKOUTS' : 'SESSIONS',
+                color: AppTheme.lime,
               ),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(width: AppTheme.spaceSM),
+            Expanded(
+              child: StatTile(
+                icon: Icons.directions_walk_rounded,
+                value: _fmtInt
+                    .format(isDay ? daySteps : weekSteps),
+                label: 'STEPS',
+                color: AppTheme.coral,
+              ),
+            ),
+            const SizedBox(width: AppTheme.spaceSM),
+            Expanded(
+              child: StatTile(
+                icon: Icons.local_fire_department_rounded,
+                value: _fmtInt.format(isDay
+                    ? _todayKcal.round()
+                    : _avgKcal.round()),
+                label: isDay ? 'KCAL' : 'KCAL AVG',
+                color: AppTheme.sky,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _vd() => Container(
-        width: 1,
-        margin: const EdgeInsets.symmetric(vertical: 14),
-        color: AppTheme.hairline(
-            Theme.of(context).brightness),
-      );
-
-  Widget _cell(String value, String label) {
-    final theme = Theme.of(context);
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Column(
+  Widget _buildQuickActions(ThemeData theme) {
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      child: IntrinsicHeight(
+        child: Row(
           children: [
-            Text(
-              value,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                fontFeatures: const [
-                  FontFeature.tabularFigures()
-                ],
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontSize: 9,
-                letterSpacing: 1.5,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
+            _actionCell(theme, 'WORKOUT',
+                Icons.fitness_center_rounded, 0),
+            _vd(),
+            _actionCell(
+                theme, 'WALK', Icons.directions_walk_rounded, 4),
+            _vd(),
+            _actionCell(theme, 'WEIGH-IN',
+                Icons.monitor_weight_rounded, 3),
           ],
         ),
       ),
     );
   }
 
-  // ─── Domain cards ───────────────────────────────────
+  Widget _actionCell(
+      ThemeData theme, String label, IconData icon, int tabIndex) {
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HitHaptics.selectionClick();
+          widget.onOpenTab?.call(tabIndex);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Column(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.lime.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 18, color: AppTheme.lime),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontSize: 9,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildTrainingCard(ThemeData theme) {
     final workouts = _view == 0 ? _dayWorkouts : _weekWorkouts;
@@ -381,13 +398,12 @@ class _SummaryScreenState extends State<SummaryScreen> {
       );
     }
 
-    int sets = 0, reps = 0, minutes = 0;
+    int sets = 0, minutes = 0;
     double? heaviest;
     for (final w in workouts) {
       sets += w.sets.length;
       minutes += w.duration.inMinutes;
       for (final s in w.sets) {
-        reps += s.setLog.reps;
         final wt = s.setLog.weightKg;
         if (wt != null &&
             wt > 0 &&
@@ -402,7 +418,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            _cell('${workouts.length}', 'SESSIONS'),
+            _cell('${workouts.length}', 'SESSIONS', lime: true),
             _vd(),
             _cell('$sets', 'SETS'),
             _vd(),
@@ -443,9 +459,9 @@ class _SummaryScreenState extends State<SummaryScreen> {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            _cell('${walks.length}', 'WALKS'),
+            _cell(_fmtInt.format(steps), 'STEPS', lime: true),
             _vd(),
-            _cell(_fmtInt.format(steps), 'STEPS'),
+            _cell('${walks.length}', 'WALKS'),
             _vd(),
             _cell(_fmtDistance(meters), 'DIST'),
             _vd(),
@@ -484,6 +500,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                   style:
                       theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w800,
+                    color: AppTheme.lime,
                     fontFeatures: const [
                       FontFeature.tabularFigures()
                     ],
@@ -513,18 +530,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
               ],
             ),
             const SizedBox(height: AppTheme.spaceMD),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 5,
-                backgroundColor:
-                    theme.colorScheme.surfaceContainerHighest,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(
-                        AppTheme.accent),
-              ),
-            ),
+            GradientBar(progress: progress, height: 8),
             const SizedBox(height: AppTheme.spaceMD),
             _compactMacro(theme, 'Protein', _todayProtein,
                 _goals.protein, _proteinColor),
@@ -539,7 +545,6 @@ class _SummaryScreenState extends State<SummaryScreen> {
       );
     }
 
-    // ── WEEK view: daily kcal chart + dashed goal line ──
     if (_weekFood.isEmpty) {
       return GlassCard(
         child: _emptyRow(
@@ -570,6 +575,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                 style:
                     theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
+                  color: AppTheme.lime,
                   fontFeatures: const [
                     FontFeature.tabularFigures()
                   ],
@@ -600,11 +606,8 @@ class _SummaryScreenState extends State<SummaryScreen> {
           ),
           const SizedBox(height: AppTheme.spaceMD),
 
-          // ── Goal legend (plain Flutter, no chart API) ──
           Row(
             children: [
-              // Dashed-line indicator matching the chart's
-              // dashed goal line
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -616,7 +619,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                           right: 2),
                       color: theme.colorScheme
                           .onSurfaceVariant
-                          .withOpacity(0.5),
+                          .withValues(alpha: 0.5),
                     ),
                 ],
               ),
@@ -648,7 +651,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                       y: _goals.calories.toDouble(),
                       color: theme
                           .colorScheme.onSurfaceVariant
-                          .withOpacity(0.5),
+                          .withValues(alpha: 0.5),
                       strokeWidth: 1,
                       dashArray: const [5, 5],
                     ),
@@ -662,7 +665,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                       '${rod.toY.round()} kcal',
                       const TextStyle(
                         color: Colors.white,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
@@ -699,7 +702,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                 ?.copyWith(
                               fontSize: 10,
                               color: i == todayIdx
-                                  ? AppTheme.accent
+                                  ? AppTheme.lime
                                   : theme.colorScheme
                                       .onSurfaceVariant,
                               fontWeight: i == todayIdx
@@ -719,12 +722,12 @@ class _SummaryScreenState extends State<SummaryScreen> {
                       barRods: [
                         BarChartRodData(
                           toY: kcalPerDay[i],
-                          width: 14,
+                          width: 16,
                           borderRadius:
                               const BorderRadius.vertical(
-                                  top: Radius.circular(3)),
+                                  top: Radius.circular(6)),
                           color: i == todayIdx
-                              ? AppTheme.accent
+                              ? AppTheme.lime
                               : theme.colorScheme
                                   .surfaceContainerHighest,
                         ),
@@ -844,7 +847,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                       theme.textTheme.labelSmall?.copyWith(
                     letterSpacing: 1,
                     color: theme.colorScheme
-                            .onSurfaceVariant,
+                        .onSurfaceVariant,
                   ),
                 ),
               ],
@@ -856,8 +859,6 @@ class _SummaryScreenState extends State<SummaryScreen> {
     );
   }
 
-  // ─── Helpers ────────────────────────────────────────
-
   Widget _emptyRow(ThemeData theme,
       {required IconData icon, required String text}) {
     return Row(
@@ -866,14 +867,10 @@ class _SummaryScreenState extends State<SummaryScreen> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color:
-                theme.colorScheme.surfaceContainerHighest,
-            borderRadius:
-                BorderRadius.circular(AppTheme.radiusMD),
+            color: AppTheme.lime.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
           ),
-          child: Icon(icon,
-              size: 19,
-              color: theme.colorScheme.onSurfaceVariant),
+          child: Icon(icon, size: 19, color: AppTheme.lime),
         ),
         const SizedBox(width: AppTheme.spaceMD),
         Expanded(
@@ -891,12 +888,14 @@ class _SummaryScreenState extends State<SummaryScreen> {
 
   Widget _deltaPill(ThemeData theme, double delta) {
     final isUp = delta >= 0;
+    final color = isUp ? AppTheme.coral : AppTheme.mint;
     return Container(
       padding: const EdgeInsets.symmetric(
           horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(20),
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -906,14 +905,14 @@ class _SummaryScreenState extends State<SummaryScreen> {
                 ? Icons.arrow_upward_rounded
                 : Icons.arrow_downward_rounded,
             size: 12,
-            color: AppTheme.accent,
+            color: color,
           ),
           const SizedBox(width: 3),
           Text(
             '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)} kg',
             style: theme.textTheme.labelMedium?.copyWith(
-              color: AppTheme.accent,
-              fontWeight: FontWeight.w700,
+              color: color,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -950,18 +949,55 @@ class _SummaryScreenState extends State<SummaryScreen> {
           ],
         ),
         const SizedBox(height: 5),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(2.5),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 4,
-            backgroundColor:
-                theme.colorScheme.surfaceContainerHighest,
-            valueColor:
-                AlwaysStoppedAnimation<Color>(color),
+        GradientBar(
+          progress: progress,
+          height: 5,
+          gradient: LinearGradient(
+            colors: [color.withValues(alpha: 0.55), color],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _vd() => Container(
+        width: 1,
+        margin: const EdgeInsets.symmetric(vertical: 14),
+        color: AppTheme.hairlineDark,
+      );
+
+  Widget _cell(String value, String label, {bool lime = false}) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Column(
+          children: [
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                color: lime ? AppTheme.lime : AppTheme.text,
+                fontFeatures: const [
+                  FontFeature.tabularFigures()
+                ],
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontSize: 9,
+                letterSpacing: 1.5,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -975,40 +1011,4 @@ class _SummaryScreenState extends State<SummaryScreen> {
   String _fmtDistance(double meters) => meters >= 1000
       ? '${(meters / 1000).toStringAsFixed(1)}km'
       : '${meters.round()}m';
-}
-
-/// Editorial section header: label + hairline rule.
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: EdgeInsets.only(
-        top: AppTheme.spaceXL,
-        bottom: AppTheme.spaceMD,
-      ),
-      child: Row(
-        children: [
-          Text(
-            text,
-            style: theme.textTheme.labelSmall?.copyWith(
-              letterSpacing: 2.5,
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: AppTheme.spaceMD),
-          Expanded(
-            child: Container(
-              height: 1,
-              color: AppTheme.hairline(theme.brightness),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

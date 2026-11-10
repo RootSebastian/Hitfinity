@@ -3,11 +3,9 @@ import '../data/exercise_catalog.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import 'exercise_tile.dart';
+import '../services/hit_settings.dart';
 
-/// Searchable, filterable exercise list.
-/// Designed to be embedded directly inside the Active Workout screen.
 class ExerciseLibrary extends StatefulWidget {
-  /// Map of exercise name → sets logged this session.
   final Map<String, int> doneCounts;
   final void Function(Exercise exercise) onSelect;
 
@@ -50,9 +48,9 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filtered;
+    final theme = Theme.of(context);
     final scheme = Theme.of(context).colorScheme;
 
-    // Group by muscle group, preserving catalog order
     final grouped = <String, List<Exercise>>{};
     for (final ex in filtered) {
       grouped.putIfAbsent(ex.muscleGroup, () => []).add(ex);
@@ -61,31 +59,59 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ─── Search ────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.symmetric(
               horizontal: AppTheme.spaceMD),
           child: TextField(
             controller: _searchController,
+            cursorColor: scheme.primary,
             decoration: InputDecoration(
               hintText: 'Search ${ExerciseCatalog.all.length} exercises...',
-              prefixIcon: const Icon(Icons.search),
+              hintStyle: TextStyle(color: scheme.onSurfaceVariant),
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                color: scheme.onSurfaceVariant,
+              ),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: Icon(
+                        Icons.clear_rounded,
+                        color: scheme.onSurfaceVariant,
+                      ),
                       onPressed: () {
                         _searchController.clear();
                         setState(() {});
                       },
                     )
                   : null,
+              filled: true,
+              fillColor: scheme.surfaceContainerHighest
+                  .withValues(alpha: 0.45),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spaceMD,
+                vertical: 13,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(999),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(999),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(999),
+                borderSide: BorderSide(
+                  color: scheme.primary,
+                  width: 1.4,
+                ),
+              ),
             ),
             onChanged: (_) => setState(() {}),
           ),
         ),
         const SizedBox(height: AppTheme.spaceSM),
 
-        // ─── Muscle group filter chips ─────────────────────
         SizedBox(
           height: 44,
           child: ListView.separated(
@@ -93,7 +119,7 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
             padding: const EdgeInsets.symmetric(
                 horizontal: AppTheme.spaceMD),
             itemCount: ExerciseCatalog.muscleGroups.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               final filter = ExerciseCatalog.muscleGroups[index];
               final isSelected = filter == _selectedFilter;
@@ -104,19 +130,28 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
               return FilterChip(
                 label: Text(filter),
                 selected: isSelected,
-                onSelected: (_) =>
-                    setState(() => _selectedFilter = filter),
+                onSelected: (_) {
+                  HitHaptics.selectionClick();
+                  setState(() => _selectedFilter = filter);
+                },
                 labelStyle: TextStyle(
-                  color: isSelected ? scheme.onPrimary : color,
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? AppTheme.ink : color,
+                  fontWeight: isSelected
+                      ? FontWeight.w800
+                      : FontWeight.w600,
+                  fontSize: 12.5,
+                  letterSpacing: 0.2,
                 ),
-                backgroundColor: color.withOpacity(0.1),
+                backgroundColor: color.withValues(alpha: 0.10),
                 selectedColor: color,
                 showCheckmark: false,
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppTheme.radiusSM),
+                materialTapTargetSize:
+                    MaterialTapTargetSize.shrinkWrap,
+                shape: StadiumBorder(
+                  side: BorderSide(
+                    color: color.withValues(
+                        alpha: isSelected ? 0 : 0.35),
+                  ),
                 ),
               );
             },
@@ -124,17 +159,33 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
         ),
         const SizedBox(height: AppTheme.spaceSM),
 
-        // ─── Grouped exercise list ─────────────────────────
         if (filtered.isEmpty)
           Padding(
             padding: const EdgeInsets.all(AppTheme.spaceXL),
             child: Center(
-              child: Text(
-                'No exercises found',
-                style:
-                    Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppTheme.lime.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child:       Icon(
+                      Icons.search_off_rounded,
+                      size: 26,
+                      color: AppTheme.lime,
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.spaceMD),
+                  Text(
+                    'No exercises found',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
           )
@@ -160,14 +211,12 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
                       const SizedBox(width: 8),
                       Text(
                         '${entry.key.toUpperCase()} • ${entry.value.length}',
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelMedium
-                            ?.copyWith(
-                              letterSpacing: 1.2,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurfaceVariant,
-                            ),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2.5,
+                          color: AppTheme.textMuted,
+                        ),
                       ),
                     ],
                   ),
