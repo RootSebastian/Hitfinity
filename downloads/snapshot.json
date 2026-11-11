@@ -1,0 +1,36 @@
+[
+  {
+    "tag": "v1.0.1",
+    "assets": [
+      {
+        "name": "Hitfinity.v1.0.1.arm64.apk",
+        "download_count": 9
+      },
+      {
+        "name": "Hitfinity.v1.0.1.armv7.apk",
+        "download_count": 2
+      },
+      {
+        "name": "Hitfinity.v1.0.1.x64.apk",
+        "download_count": 2
+      }
+    ]
+  },
+  {
+    "tag": "v1.0.0",
+    "assets": [
+      {
+        "name": "Hitfinity-v1.0.0-arm32.apk",
+        "download_count": 2
+      },
+      {
+        "name": "Hitfinity-v1.0.0-arm64.apk",
+        "download_count": 12
+      },
+      {
+        "name": "Hitfinity-v1.0.0-x64.apk",
+        "download_count": 1
+      }
+    ]
+  }
+]
